@@ -28,7 +28,7 @@ app = FastAPI(lifespan=lifespan)
 state = {
     "current_translation": "KJV",
     "display_duration": 15,
-    "active_scripture": None,  # Will hold {"reference": "...", "text": "..."} or None
+    "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
     "recent_transcripts": []    # List of {"text": "...", "is_final": bool}
 }
 
@@ -69,6 +69,28 @@ async def clear_active_scripture():
         auto_clear_task = None
     state["active_scripture"] = None
     await broadcast_state()
+
+async def _reload_active_scripture():
+    """Re-fetch the active scripture in the current translation."""
+    cur = state["active_scripture"]
+    if cur is None or not cur.get("book"):
+        return
+    scripture = get_scripture(
+        state["current_translation"],
+        cur["book"], cur["chapter"],
+        cur.get("verse_start"), cur.get("verse_end")
+    )
+    if "error" not in scripture and scripture["verses"]:
+        await set_active_scripture({
+            "reference": scripture["reference"],
+            "text": scripture["combined_text"],
+            "book": cur["book"],
+            "chapter": cur["chapter"],
+            "verse_start": cur.get("verse_start"),
+            "verse_end": cur.get("verse_end")
+        })
+    else:
+        await clear_active_scripture()
 
 # Helper to broadcast state to all clients
 async def broadcast_state():
@@ -126,7 +148,11 @@ async def process_transcript(text: str, is_final: bool = False):
             if "error" not in scripture and scripture["verses"]:
                 await set_active_scripture({
                     "reference": scripture["reference"],
-                    "text": scripture["combined_text"]
+                    "text": scripture["combined_text"],
+                    "book": candidate["book"],
+                    "chapter": candidate["chapter"],
+                    "verse_start": candidate["verse_start"],
+                    "verse_end": candidate["verse_end"]
                 })
 
 # WebSocket endpoint
@@ -156,7 +182,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "set_translation":
                 state["current_translation"] = msg.get("translation", "KJV")
                 if state["active_scripture"]:
-                    await clear_active_scripture()
+                    await _reload_active_scripture()
                 else:
                     await broadcast_state()
                 
@@ -180,7 +206,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     if "error" not in scripture and scripture["verses"]:
                         await set_active_scripture({
                             "reference": scripture["reference"],
-                            "text": scripture["combined_text"]
+                            "text": scripture["combined_text"],
+                            "book": candidate["book"],
+                            "chapter": candidate["chapter"],
+                            "verse_start": candidate["verse_start"],
+                            "verse_end": candidate["verse_end"]
                         })
                         
             elif msg_type == "manual_override":
