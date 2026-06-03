@@ -96,6 +96,134 @@ function setConnectionStatus(status) {
     }
 }
 
+// ── Browser Speech Recognition ──────────────────────────────
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isRecording = false;
+let recognitionRestart = false;
+
+function hasSpeechSupport() {
+    return !!SpeechRecognition;
+}
+
+function initSpeechRecognition() {
+    if (!hasSpeechSupport()) {
+        micStatus.className = 'status-badge status-inactive';
+        micStatus.innerHTML = '<span class="status-dot"></span> Not supported';
+        micToggleBtn.disabled = true;
+        micToggleBtn.title = 'Speech recognition not supported in this browser';
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+
+    let finalTranscript = '';
+
+    recognition.onresult = (event) => {
+        let interimText = '';
+        finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            if (result.isFinal) {
+                finalTranscript += result[0].transcript;
+            } else {
+                interimText += result[0].transcript;
+            }
+        }
+
+        if (interimText) {
+            micToggleBtn.classList.add('speaking');
+            micStatus.className = 'status-badge status-active';
+            micStatus.innerHTML = '<span class="status-dot"></span> Listening…';
+            handleTranscript(interimText.trim(), false);
+        }
+
+        if (finalTranscript) {
+            const text = finalTranscript.trim();
+            if (text) {
+                handleTranscript(text, true);
+                send({ type: 'simulated_speech', text });
+            }
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.warn('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+            micStatus.className = 'status-badge status-inactive';
+            micStatus.innerHTML = '<span class="status-dot"></span> Mic blocked';
+            micToggleBtn.classList.remove('active', 'speaking');
+            isRecording = false;
+        } else if (event.error === 'no-speech') {
+            // Ignore — will restart automatically
+        } else {
+            stopRecording();
+        }
+    };
+
+    recognition.onend = () => {
+        micToggleBtn.classList.remove('active', 'speaking');
+        if (isRecording || recognitionRestart) {
+            recognitionRestart = false;
+            try { recognition.start(); } catch {}
+        } else {
+            micStatus.className = 'status-badge status-inactive';
+            micStatus.innerHTML = '<span class="status-dot"></span> Idle';
+        }
+    };
+}
+
+function toggleRecording() {
+    if (!recognition) {
+        initSpeechRecognition();
+        if (!recognition) return;
+    }
+
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+function startRecording() {
+    if (isRecording || !recognition) return;
+    try {
+        recognition.start();
+        isRecording = true;
+        micToggleBtn.classList.add('active');
+        micStatus.className = 'status-badge status-active';
+        micStatus.innerHTML = '<span class="status-dot"></span> Listening…';
+    } catch (e) {
+        console.warn('Failed to start speech recognition:', e);
+    }
+}
+
+function stopRecording() {
+    isRecording = false;
+    micToggleBtn.classList.remove('active', 'speaking');
+    micStatus.className = 'status-badge status-inactive';
+    micStatus.innerHTML = '<span class="status-dot"></span> Idle';
+    if (recognition) {
+        try { recognition.stop(); } catch {}
+    }
+}
+
+micToggleBtn.addEventListener('click', toggleRecording);
+
+// Re-init on reconnect to ensure fresh state
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && isRecording) {
+        recognitionRestart = true;
+        try { recognition.abort(); } catch {}
+    }
+});
+
 // ── State Update Handler ───────────────────────────────────
 function handleStateUpdate(state) {
     // Sync translation selector
