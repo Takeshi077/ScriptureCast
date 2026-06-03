@@ -16,7 +16,7 @@ const translationSel  = document.getElementById('translation-select');
 const durationInput   = document.getElementById('duration-input');
 const clearBtn        = document.getElementById('clear-btn');
 const transcriptFeed  = document.getElementById('transcript-feed');
-const micStatus       = document.getElementById('mic-status');
+const micLiveLabel    = document.getElementById('mic-live-label');
 const simInput        = document.getElementById('sim-input');
 const simSendBtn      = document.getElementById('sim-send-btn');
 const candidatesList  = document.getElementById('candidates-list');
@@ -106,10 +106,13 @@ function hasSpeechSupport() {
     return !!SpeechRecognition;
 }
 
+function setLiveLabel(show) {
+    micLiveLabel.classList.toggle('active', show);
+}
+
 function initSpeechRecognition() {
     if (!hasSpeechSupport()) {
-        micStatus.className = 'status-badge status-inactive';
-        micStatus.innerHTML = '<span class="status-dot"></span> Not supported';
+        setLiveLabel(false);
         micToggleBtn.disabled = true;
         micToggleBtn.title = 'Speech recognition not supported in this browser';
         return;
@@ -122,6 +125,8 @@ function initSpeechRecognition() {
     recognition.maxAlternatives = 1;
 
     let finalTranscript = '';
+
+    let lastInterimEl = null;
 
     recognition.onresult = (event) => {
         let interimText = '';
@@ -138,14 +143,25 @@ function initSpeechRecognition() {
 
         if (interimText) {
             micToggleBtn.classList.add('speaking');
-            micStatus.className = 'status-badge status-active';
-            micStatus.innerHTML = '<span class="status-dot"></span> Listening…';
-            handleTranscript(interimText.trim(), false);
+            setLiveLabel(true);
+            if (!lastInterimEl || lastInterimEl.classList.contains('final')) {
+                lastInterimEl = document.createElement('div');
+                lastInterimEl.className = 'transcript-chunk';
+                const placeholder = transcriptFeed.querySelector('.placeholder-text');
+                if (placeholder) placeholder.remove();
+                transcriptFeed.appendChild(lastInterimEl);
+            }
+            lastInterimEl.textContent = interimText.trim();
+            transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
         }
 
         if (finalTranscript) {
             const text = finalTranscript.trim();
             if (text) {
+                if (lastInterimEl && !lastInterimEl.classList.contains('final')) {
+                    lastInterimEl.remove();
+                }
+                lastInterimEl = null;
                 handleTranscript(text, true);
                 send({ type: 'simulated_speech', text });
             }
@@ -155,8 +171,7 @@ function initSpeechRecognition() {
     recognition.onerror = (event) => {
         console.warn('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-            micStatus.className = 'status-badge status-inactive';
-            micStatus.innerHTML = '<span class="status-dot"></span> Mic blocked';
+            setLiveLabel(false);
             micToggleBtn.classList.remove('active', 'speaking');
             isRecording = false;
         } else if (event.error === 'no-speech') {
@@ -172,8 +187,7 @@ function initSpeechRecognition() {
             recognitionRestart = false;
             try { recognition.start(); } catch {}
         } else {
-            micStatus.className = 'status-badge status-inactive';
-            micStatus.innerHTML = '<span class="status-dot"></span> Idle';
+            setLiveLabel(false);
         }
     };
 }
@@ -197,8 +211,7 @@ function startRecording() {
         recognition.start();
         isRecording = true;
         micToggleBtn.classList.add('active');
-        micStatus.className = 'status-badge status-active';
-        micStatus.innerHTML = '<span class="status-dot"></span> Listening…';
+        setLiveLabel(true);
     } catch (e) {
         console.warn('Failed to start speech recognition:', e);
     }
@@ -207,8 +220,7 @@ function startRecording() {
 function stopRecording() {
     isRecording = false;
     micToggleBtn.classList.remove('active', 'speaking');
-    micStatus.className = 'status-badge status-inactive';
-    micStatus.innerHTML = '<span class="status-dot"></span> Idle';
+    setLiveLabel(false);
     if (recognition) {
         try { recognition.stop(); } catch {}
     }
@@ -243,9 +255,7 @@ function handleStateUpdate(state) {
 
 // ── Transcript Handler ─────────────────────────────────────
 function handleTranscript(text, isFinal) {
-    // Show mic as active
-    micStatus.className = 'status-badge status-active';
-    micStatus.querySelector('.status-dot').textContent = '';
+    setLiveLabel(true);
 
     const chunk = document.createElement('div');
     chunk.className = 'transcript-chunk' + (isFinal ? ' final' : '');
