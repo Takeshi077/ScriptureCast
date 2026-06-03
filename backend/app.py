@@ -173,7 +173,8 @@ async def websocket_endpoint(websocket: WebSocket):
             active_websockets.remove(websocket)
 
 # HTML endpoints to serve frontend files directly for easy local opening
-FRONTEND_DIR = "c:\\Users\\user\\Desktop\\ScriptureCast\\frontend"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 @app.get("/")
 async def get_dashboard():

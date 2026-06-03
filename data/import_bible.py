@@ -5,7 +5,8 @@ import io
 import sqlite3
 import os
 
-DB_DIR = "c:\\Users\\user\\Desktop\\ScriptureCast\\data"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.path.join(DB_DIR, "bible.db")
 
 # 3-letter WEB abbreviation to standard English full name mapping

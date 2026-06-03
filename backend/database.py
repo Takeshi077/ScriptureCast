@@ -1,7 +1,8 @@
 import sqlite3
 import os
 
-DB_PATH = "c:\\Users\\user\\Desktop\\ScriptureCast\\data\\bible.db"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
 
 def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
     """
