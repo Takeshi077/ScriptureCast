@@ -32,6 +32,7 @@ const countdownWrap   = document.getElementById('countdown-wrap');
 const countdownLabel  = document.getElementById('countdown-label');
 const countdownTimer  = document.getElementById('countdown-timer');
 const countdownFill   = document.getElementById('countdown-bar-fill');
+const micToggleBtn    = document.getElementById('mic-toggle-btn');
 
 // ── State ──────────────────────────────────────────────────
 let socket = null;
