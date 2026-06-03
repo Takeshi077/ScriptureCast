@@ -3,3 +3,4 @@ uvicorn
 websockets
 sounddevice
 numpy
+faster-whisper
