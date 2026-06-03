@@ -295,6 +295,59 @@ input[type="number"] { width: 70px; text-align: center; }
     padding: 24px 16px;
 }
 
+/* Mic controls in panel header */
+#mic-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mic-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    padding: 0;
+}
+
+.mic-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.mic-btn:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+}
+
+.mic-btn.active {
+    border-color: var(--success);
+    color: var(--success);
+    background: var(--success-dim);
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.3);
+    animation: mic-pulse 1.5s infinite;
+}
+
+.mic-btn.speaking {
+    border-color: var(--accent-violet);
+    color: var(--accent-violet);
+    background: rgba(129, 140, 248, 0.1);
+    box-shadow: 0 0 16px rgba(129, 140, 248, 0.3);
+}
+
+@keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(52, 211, 153, 0.2); }
+    50%       { box-shadow: 0 0 20px rgba(52, 211, 153, 0.5); }
+}
+
 /* ============================================================
    LEFT PANEL — Transcript
    ============================================================ */
