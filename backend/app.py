@@ -7,15 +7,16 @@ import os
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
-from .transcriber import start_transcribing, stop_transcribing
+from .transcriber import init_model, start_transcribing, stop_transcribing
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start transcription background thread
+    # Startup: Load ASR model then start transcription background thread
+    init_model()
     loop = asyncio.get_running_loop()
     def handle_transcription(text):
         asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True), loop)
-        
+
     start_transcribing(handle_transcription)
     yield
     # Shutdown: Stop transcription

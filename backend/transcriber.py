@@ -11,8 +11,9 @@ audio_queue = queue.Queue()
 is_listening = False
 listen_thread = None
 
-# ASR model (lazy-loaded on first use)
+# ASR model
 _model = None
+_model_ready = False
 _model_lock = threading.Lock()
 
 # Audio capture settings
@@ -24,17 +25,19 @@ SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
 MODEL_SIZE = "base"           # whisper model size (tiny/base/small/medium/large)
 
-def _load_model():
-    global _model
-    if _model is not None:
+def init_model():
+    """Eagerly load the ASR model at startup. Returns True if successful."""
+    global _model, _model_ready
+    if _model_ready:
         return True
     with _model_lock:
-        if _model is not None:
+        if _model_ready:
             return True
         try:
             from faster_whisper import WhisperModel
             print(f"  Loading faster-whisper ({MODEL_SIZE}) model… (first download may take a minute)")
             _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
+            _model_ready = True
             print("  ASR model loaded successfully.")
             return True
         except ImportError:
@@ -45,6 +48,9 @@ def _load_model():
             print(f"  WARNING: Failed to load ASR model: {e}")
             return False
 
+def _model_available():
+    return _model_ready
+
 def audio_callback(indata, frames, time_info, status):
     if status:
         print("Audio status warning:", status)
@@ -53,9 +59,6 @@ def audio_callback(indata, frames, time_info, status):
 def transcription_loop(callback_fn):
     global is_listening
     print("  Microphone input active — waiting for speech…")
-
-    # Load model once
-    model_ready = _load_model()
 
     # Buffered audio for current utterance
     utterance_buffer = []
@@ -76,7 +79,7 @@ def transcription_loop(callback_fn):
                     if utterance_active:
                         silence_blocks += 1
                         if silence_blocks >= silence_blocks_limit:
-                            _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                            _finalise_utterance(utterance_buffer, callback_fn)
                             utterance_buffer = []
                             utterance_active = False
                             silence_blocks = 0
@@ -95,7 +98,7 @@ def transcription_loop(callback_fn):
                     silence_blocks = 0
                     blocks_since_last_speech += 1
                     if blocks_since_last_speech >= max_utterance_blocks:
-                        _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                        _finalise_utterance(utterance_buffer, callback_fn)
                         utterance_buffer = []
                         utterance_active = False
                         silence_blocks = 0
@@ -106,7 +109,7 @@ def transcription_loop(callback_fn):
                     silence_blocks += 1
                     blocks_since_last_speech = 0
                     if silence_blocks >= silence_blocks_limit:
-                        _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                        _finalise_utterance(utterance_buffer, callback_fn)
                         utterance_buffer = []
                         utterance_active = False
                         silence_blocks = 0
@@ -117,8 +120,8 @@ def transcription_loop(callback_fn):
         while is_listening:
             time.sleep(1.0)
 
-def _finalise_utterance(buffer, callback_fn, model_ready):
-    if not buffer or not model_ready:
+def _finalise_utterance(buffer, callback_fn):
+    if not buffer or not _model_ready:
         return
     audio_np = np.concatenate(buffer, axis=0).flatten()
     if len(audio_np) < SAMPLE_RATE * 0.5:  # ignore <0.5s clips
