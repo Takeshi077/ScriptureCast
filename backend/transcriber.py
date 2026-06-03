@@ -11,64 +11,138 @@ audio_queue = queue.Queue()
 is_listening = False
 listen_thread = None
 
+# ASR model (lazy-loaded on first use)
+_model = None
+_model_lock = threading.Lock()
+
+# Audio capture settings
+SAMPLE_RATE = 16000
+CHANNELS = 1
+BLOCK_DURATION = 0.5          # seconds per audio block
+RMS_THRESHOLD = 0.02          # voice activity threshold
+SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
+MAX_UTTERANCE = 30            # max seconds for a single utterance
+MODEL_SIZE = "base"           # whisper model size (tiny/base/small/medium/large)
+
+def _load_model():
+    global _model
+    if _model is not None:
+        return True
+    with _model_lock:
+        if _model is not None:
+            return True
+        try:
+            from faster_whisper import WhisperModel
+            print(f"  Loading faster-whisper ({MODEL_SIZE}) model… (first download may take a minute)")
+            _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
+            print("  ASR model loaded successfully.")
+            return True
+        except ImportError:
+            print("  WARNING: faster-whisper not installed. ASR disabled.")
+            print("  Install with: pip install faster-whisper")
+            return False
+        except Exception as e:
+            print(f"  WARNING: Failed to load ASR model: {e}")
+            return False
+
 def audio_callback(indata, frames, time_info, status):
-    """Callback function for sounddevice to capture audio streams."""
     if status:
         print("Audio status warning:", status)
     audio_queue.put(indata.copy())
 
 def transcription_loop(callback_fn):
-    """Background loop that processes audio queue and transcribes speech."""
     global is_listening
-    print("ASR Engine listening loop started.")
-    
-    # Setup standard audio capture settings (16kHz mono)
-    sample_rate = 16000
-    channels = 1
-    
-    # We can implement a simple voice activity detector or chunk-based processing
-    # In a full Whisper.cpp implementation, we feed these audio chunks to Whisper's C++ interface.
-    # For this offline/local Python server, we will provide a framework that prints audio level.
-    # If the user is running in mock/demo mode, we also have mock speech trigger.
-    
-    # Start microphone stream
+    print("  Microphone input active — waiting for speech…")
+
+    # Load model once
+    model_ready = _load_model()
+
+    # Buffered audio for current utterance
+    utterance_buffer = []
+    silence_blocks = 0
+    utterance_active = False
+    blocks_since_last_speech = 0
+
+    silence_blocks_limit = int(SILENCE_TIMEOUT / BLOCK_DURATION)
+    max_utterance_blocks = int(MAX_UTTERANCE / BLOCK_DURATION)
+
     try:
-        with sd.InputStream(samplerate=sample_rate, channels=channels, callback=audio_callback):
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, callback=audio_callback,
+                            blocksize=int(SAMPLE_RATE * BLOCK_DURATION)):
             while is_listening:
-                # Get audio block (this is non-blocking with timeout to check loop status)
                 try:
                     audio_block = audio_queue.get(timeout=1.0)
-                    
-                    # Compute volume level (RMS) to show signal health
-                    rms = np.sqrt(np.mean(audio_block**2))
-                    if rms > 0.05: # Simple threshold gate
-                        # Here, we would run whisper model inference:
-                        # result = whisper_model.transcribe(audio_data)
-                        # callback_fn(result["text"])
-                        pass
                 except queue.Empty:
+                    if utterance_active:
+                        silence_blocks += 1
+                        if silence_blocks >= silence_blocks_limit:
+                            _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                            utterance_buffer = []
+                            utterance_active = False
+                            silence_blocks = 0
                     continue
-                except Exception as e:
-                    print("Error processing audio block:", e)
-                    break
+
+                # Compute RMS
+                rms = np.sqrt(np.mean(audio_block**2))
+                is_speech = rms > RMS_THRESHOLD
+
+                if is_speech:
+                    if not utterance_active:
+                        utterance_active = True
+                        silence_blocks = 0
+                        utterance_buffer = []
+                    utterance_buffer.append(audio_block.copy())
+                    silence_blocks = 0
+                    blocks_since_last_speech += 1
+                    if blocks_since_last_speech >= max_utterance_blocks:
+                        _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                        utterance_buffer = []
+                        utterance_active = False
+                        silence_blocks = 0
+                        blocks_since_last_speech = 0
+                elif utterance_active:
+                    # Keep buffering during silence to capture trailing words
+                    utterance_buffer.append(audio_block.copy())
+                    silence_blocks += 1
+                    blocks_since_last_speech = 0
+                    if silence_blocks >= silence_blocks_limit:
+                        _finalise_utterance(utterance_buffer, callback_fn, model_ready)
+                        utterance_buffer = []
+                        utterance_active = False
+                        silence_blocks = 0
+
     except Exception as e:
-        print("Could not start audio input stream (no mic detected or sound card error):", e)
-        print("Falling back to simulated/dashboard manual input only.")
+        print("  Could not start audio input stream (no mic detected or sound card error):", e)
+        print("  ASR unavailable — use simulated speech from the dashboard instead.")
         while is_listening:
             time.sleep(1.0)
 
+def _finalise_utterance(buffer, callback_fn, model_ready):
+    if not buffer or not model_ready:
+        return
+    audio_np = np.concatenate(buffer, axis=0).flatten()
+    if len(audio_np) < SAMPLE_RATE * 0.5:  # ignore <0.5s clips
+        return
+
+    try:
+        segments, _ = _model.transcribe(audio_np, beam_size=1, language="en")
+        text = " ".join(seg.text for seg in segments).strip()
+        if text:
+            print(f"  ASR: {text}")
+            callback_fn(text)
+    except Exception as e:
+        print(f"  ASR transcription error: {e}")
+
 def start_transcribing(callback_fn):
-    """Starts the real-time audio transcription background thread."""
     global is_listening, listen_thread
     if is_listening:
         return
-    
+
     is_listening = True
     listen_thread = threading.Thread(target=transcription_loop, args=(callback_fn,), daemon=True)
     listen_thread.start()
 
 def stop_transcribing():
-    """Stops the real-time audio transcription."""
     global is_listening
     is_listening = False
     if listen_thread:
