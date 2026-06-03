@@ -106,6 +106,12 @@ function hasSpeechSupport() {
     return !!SpeechRecognition;
 }
 
+// Quick client-side check if text contains a potential Bible reference
+function hasVerseReference(text) {
+    const bookPattern = /(?:genesis|gen|exodus|exo|leviticus|lev|numbers|num|deuteronomy|deut|joshua|josh|judges|judg|ruth|rut|samuel|sam|kings|chronicles|chron|ezra|ezr|nehemiah|neh|esther|esth|est|job|psalms?|psa|proverbs|prov|pro|ecclesiastes|ecc|song|isaiah|isa|jeremiah|jer|lamentations|lam|ezekiel|ezek|daniel|dan|hosea|hos|joel|amos|obadiah|jonah|micah|mic|nahum|habakkuk|hab|zephaniah|zeph|haggai|hag|zechariah|zech|malachi|mal|matthew|matt|mat|mark|luke|luk|john|joh|acts|romans|rom|corinthians|cor|galatians|gal|ephesians|eph|philippians|phil|colossians|col|thessalonians|thess|timothy|tim|titus|tit|philemon|philem|hebrews|hebr|heb|james|jas|peter|pet|jude|jud|revelation|rev|revel)\b/i;
+    return bookPattern.test(text);
+}
+
 function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
 }
@@ -162,8 +168,12 @@ function initSpeechRecognition() {
                     lastInterimEl.remove();
                 }
                 lastInterimEl = null;
-                handleTranscript(text, true);
-                send({ type: 'simulated_speech', text });
+                if (hasVerseReference(text)) {
+                    handleTranscript(text, true);
+                    send({ type: 'simulated_speech', text });
+                } else {
+                    handleTranscript(text, true);
+                }
             }
         }
     };
