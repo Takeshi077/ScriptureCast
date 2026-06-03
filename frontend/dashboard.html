@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScriptureCast – Operator Dashboard</title>
+    <meta name="description" content="ScriptureCast operator control panel for managing live scripture display.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/dashboard.css">
+</head>
+<body>
+    <!-- ===== HEADER ===== -->
+    <header id="app-header">
+        <div id="header-brand">
+            <svg id="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6C4 4.9 4.9 4 6 4H26C27.1 4 28 4.9 28 6V22C28 23.1 27.1 24 26 24H18L14 28L10 24H6C4.9 24 4 23.1 4 22V6Z" fill="url(#logoGrad)"/>
+                <path d="M10 10H22M10 14H18M10 18H15" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                <defs>
+                    <linearGradient id="logoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#38bdf8"/>
+                        <stop offset="100%" stop-color="#818cf8"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span id="brand-name">ScriptureCast</span>
+        </div>
+        <div id="header-controls">
+            <div id="connection-indicator">
+                <span id="conn-dot"></span>
+                <span id="conn-label">Connecting…</span>
+            </div>
+            <div id="translation-group">
+                <label for="translation-select">Translation</label>
+                <select id="translation-select">
+                    <option value="KJV">KJV</option>
+                    <option value="WEB">WEB</option>
+                </select>
+            </div>
+            <div id="duration-group">
+                <label for="duration-input">Auto-clear (s)</label>
+                <input id="duration-input" type="number" min="0" max="120" value="15" step="5">
+            </div>
+            <button id="clear-btn" class="btn btn-danger" aria-label="Clear display">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                Clear Display
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== MAIN LAYOUT ===== -->
+    <main id="main-grid">
+
+        <!-- ===== LEFT PANEL: Live Transcript ===== -->
+        <section id="panel-transcript" aria-labelledby="transcript-heading">
+            <div class="panel-header">
+                <h2 id="transcript-heading">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 2a1 1 0 00-.707 1.707L7 4.414v3.758a1 1 0 01-.293.707l-4 4C.817 14.769 2.156 18 4.828 18h10.344c2.672 0 4.011-3.231 2.122-5.121l-4-4A1 1 0 0113 8.172V4.414l.707-.707A1 1 0 0013 2H7zm2 6.172V4h2v4.172a3 3 0 00.879 2.12l1.027 1.028a4 4 0 00-2.171.102l-.47.156a4 4 0 01-2.53 0l-.563-.187a1.993 1.993 0 00-.114-.035l1.063-1.063A3 3 0 009 8.172z" clip-rule="evenodd"/></svg>
+                    Live Transcript
+                </h2>
+                <div id="mic-status" class="status-badge status-inactive">
+                    <span class="status-dot"></span> Listening
+                </div>
+            </div>
+            <div id="transcript-feed" aria-live="polite">
+                <p class="placeholder-text">Waiting for audio input…</p>
+            </div>
+
+            <!-- Manual speech sim -->
+            <div id="sim-speech-area">
+                <h3>Simulate Speech</h3>
+                <textarea id="sim-input" placeholder="Type or paste sermon text here, e.g. 'turn to John 3:16'…" rows="4" aria-label="Simulate spoken sermon text"></textarea>
+                <button id="sim-send-btn" class="btn btn-primary">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                    Process Text
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== CENTER PANEL: Detected Verses & Manual Lookup ===== -->
+        <section id="panel-center">
+
+            <!-- Detected Candidates -->
+            <div id="candidates-card" class="card">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.396 0 2.698.362 3.805 1.014A7.968 7.968 0 0114 14.5c1.255 0 2.443.29 3.5.804v-10A7.969 7.969 0 0014 4c-1.396 0-2.698.362-3.805 1.014A7.968 7.968 0 009 4.804z"/></svg>
+                        Detected References
+                    </h2>
+                </div>
+                <div id="candidates-list">
+                    <p class="placeholder-text">Detected verse references will appear here automatically…</p>
+                </div>
+            </div>
+
+            <!-- Manual Verse Lookup -->
+            <div id="manual-card" class="card">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+                        Manual Verse Lookup
+                    </h2>
+                </div>
+                <div id="manual-lookup-form">
+                    <input id="manual-input" type="text" placeholder="e.g. Romans 8:28 or Psalm 23:1-3" aria-label="Manual verse reference input">
+                    <button id="manual-lookup-btn" class="btn btn-primary" aria-label="Look up and display verse">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/></svg>
+                        Display
+                    </button>
+                </div>
+                <div id="lookup-preview" class="hidden">
+                    <div id="lookup-reference-label"></div>
+                    <div id="lookup-text-preview"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== RIGHT PANEL: Projector Preview ===== -->
+        <section id="panel-preview" aria-labelledby="preview-heading">
+            <div class="panel-header">
+                <h2 id="preview-heading">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                    Projector Preview
+                </h2>
+                <div id="display-status" class="status-badge status-inactive">
+                    <span class="status-dot"></span> Off
+                </div>
+            </div>
+
+            <!-- Mini projector simulation -->
+            <div id="projector-preview-screen">
+                <div id="preview-inner">
+                    <div id="preview-reference">—</div>
+                    <div id="preview-text">Nothing on display</div>
+                </div>
+            </div>
+
+            <!-- Countdown bar -->
+            <div id="countdown-wrap">
+                <span id="countdown-label">Auto-clear in <strong id="countdown-timer">—</strong>s</span>
+                <div id="countdown-bar-track">
+                    <div id="countdown-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div id="preview-actions">
+                <button id="open-screen-btn" class="btn btn-secondary" onclick="window.open('/screen', '_blank')">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
+                    Open Projector Screen
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="/frontend/js/dashboard.js"></script>
+</body>
+</html>
