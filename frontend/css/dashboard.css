@@ -302,6 +302,19 @@ input[type="number"] { width: 70px; text-align: center; }
     gap: 8px;
 }
 
+.mic-live-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--success);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.mic-live-label.active {
+    opacity: 1;
+}
+
 .mic-btn {
     width: 32px;
     height: 32px;
