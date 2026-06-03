@@ -13,9 +13,9 @@ if __name__ == "__main__":
     print("=" * 52)
     print("  ScriptureCast Server Starting")
     print("=" * 52)
-    print("  Dashboard  →  http://localhost:8000")
-    print("  Screen     →  http://localhost:8000/screen")
-    print("  API Docs   →  http://localhost:8000/docs")
+    print("  Dashboard   -> http://localhost:8000")
+    print("  Screen      -> http://localhost:8000/screen")
+    print("  API Docs    -> http://localhost:8000/docs")
     print("=" * 52)
     print("  Press Ctrl+C to stop\n")
 
