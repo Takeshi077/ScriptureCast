@@ -218,10 +218,20 @@ function buildRefString(candidate) {
 }
 
 async function fetchVersePreview(candidate, el) {
-    // We use the WebSocket to request via manual_verse, but since this is async preview
-    // we'll send a manual_verse message and show "loading" — or we can call the rest API
-    // For simplicity, just set a loading state and rely on the main display flow
-    el.textContent = `${candidate.book} ${candidate.chapter}${candidate.verse_start ? ':' + candidate.verse_start : ''} — click Display Now to load`;
+    const book = encodeURIComponent(candidate.book);
+    const chapter = candidate.chapter;
+    const verse = candidate.verse_start || 1;
+    try {
+        const resp = await fetch(`/api/verse?book=${book}&chapter=${chapter}&verse=${verse}`);
+        const data = await resp.json();
+        if (data.error || !data.verses || data.verses.length === 0) {
+            el.textContent = 'Preview unavailable';
+        } else {
+            el.textContent = `"${data.verses[0].text}"`;
+        }
+    } catch {
+        el.textContent = 'Preview unavailable';
+    }
 }
 
 function displayCandidate(candidate) {

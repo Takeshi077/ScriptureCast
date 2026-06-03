@@ -34,6 +34,41 @@ state = {
 # Connected clients
 active_websockets = set()
 
+# Auto-clear task handle
+auto_clear_task = None
+
+async def set_active_scripture(scripture_data):
+    """Set active scripture and schedule auto-clear."""
+    global auto_clear_task
+
+    # Cancel any existing auto-clear
+    if auto_clear_task is not None:
+        auto_clear_task.cancel()
+        auto_clear_task = None
+
+    state["active_scripture"] = scripture_data
+
+    # Schedule auto-clear if duration is set
+    duration = state.get("display_duration", 0)
+    if scripture_data is not None and duration > 0:
+        async def auto_clear():
+            await asyncio.sleep(duration)
+            state["active_scripture"] = None
+            await broadcast_state()
+
+        auto_clear_task = asyncio.create_task(auto_clear())
+
+    await broadcast_state()
+
+async def clear_active_scripture():
+    """Clear active scripture and cancel auto-clear."""
+    global auto_clear_task
+    if auto_clear_task is not None:
+        auto_clear_task.cancel()
+        auto_clear_task = None
+    state["active_scripture"] = None
+    await broadcast_state()
+
 # Helper to broadcast state to all clients
 async def broadcast_state():
     if not active_websockets:
@@ -88,11 +123,10 @@ async def process_transcript(text: str, is_final: bool = False):
                 candidate["verse_end"]
             )
             if "error" not in scripture and scripture["verses"]:
-                state["active_scripture"] = {
+                await set_active_scripture({
                     "reference": scripture["reference"],
                     "text": scripture["combined_text"]
-                }
-                await broadcast_state()
+                })
 
 # WebSocket endpoint
 @app.websocket("/ws")
@@ -116,17 +150,14 @@ async def websocket_endpoint(websocket: WebSocket):
             
             msg_type = msg.get("type")
             if msg_type == "clear":
-                state["active_scripture"] = None
-                await broadcast_state()
+                await clear_active_scripture()
                 
             elif msg_type == "set_translation":
                 state["current_translation"] = msg.get("translation", "KJV")
-                # If there's an active scripture, reload it with the new translation
                 if state["active_scripture"]:
-                    # We would need the parsed components, but for now we can just let it clear
-                    # or re-fetch. To keep it simple, we clear it or reload. Let's just let it clear.
-                    state["active_scripture"] = None
-                await broadcast_state()
+                    await clear_active_scripture()
+                else:
+                    await broadcast_state()
                 
             elif msg_type == "set_duration":
                 state["display_duration"] = int(msg.get("duration", 15))
@@ -146,19 +177,16 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidate["verse_end"]
                     )
                     if "error" not in scripture and scripture["verses"]:
-                        state["active_scripture"] = {
+                        await set_active_scripture({
                             "reference": scripture["reference"],
                             "text": scripture["combined_text"]
-                        }
-                        await broadcast_state()
+                        })
                         
             elif msg_type == "manual_override":
-                # Operator directly forces specific text on screen
-                state["active_scripture"] = {
+                await set_active_scripture({
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
-                }
-                await broadcast_state()
+                })
                 
             elif msg_type == "simulated_speech":
                 # Simulated transcript message from dashboard
@@ -189,6 +217,12 @@ async def get_screen():
     if os.path.exists(screen_path):
         return FileResponse(screen_path)
     return HTMLResponse("Screen HTML file not found.", status_code=404)
+
+# API endpoint for verse preview (used by dashboard candidate cards)
+@app.get("/api/verse")
+async def api_verse_preview(book: str, chapter: int, verse: int = None):
+    scripture = get_scripture(state["current_translation"], book, chapter, verse)
+    return scripture
 
 # Mount frontend files (css, js, images) at /frontend
 if os.path.exists(FRONTEND_DIR):
