@@ -499,5 +499,35 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// ── Auto-start mic ──────────────────────────────────────────
+function autoStartMic() {
+    if (!recognition) {
+        initSpeechRecognition();
+    }
+    if (!recognition || isRecording) return;
+    try {
+        recognition.start();
+        isRecording = true;
+        micToggleBtn.classList.add('active');
+        setLiveLabel(true);
+    } catch {
+        const startOnInteraction = () => {
+            document.removeEventListener('click', startOnInteraction);
+            document.removeEventListener('touchstart', startOnInteraction);
+            if (!isRecording && recognition) {
+                try {
+                    recognition.start();
+                    isRecording = true;
+                    micToggleBtn.classList.add('active');
+                    setLiveLabel(true);
+                } catch {}
+            }
+        };
+        document.addEventListener('click', startOnInteraction, { once: true });
+        document.addEventListener('touchstart', startOnInteraction, { once: true });
+    }
+}
+
 // ── Boot ───────────────────────────────────────────────────
 connect();
+autoStartMic();
