@@ -1,23 +1,25 @@
 import os
 import json
+import re
 import sqlite3
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from joblib import dump, load as jload
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
-EMBEDDINGS_DIR = os.path.join(BASE_DIR, "data", "embeddings")
-EMBEDDINGS_FILE = os.path.join(EMBEDDINGS_DIR, "verse_embeddings.npy")
-VERSE_INFO_FILE = os.path.join(EMBEDDINGS_DIR, "verse_info.json")
+CACHE_DIR = os.path.join(BASE_DIR, "data", "embeddings")
+VECTORIZER_FILE = os.path.join(CACHE_DIR, "tfidf_vectorizer.joblib")
+MATRIX_FILE = os.path.join(CACHE_DIR, "tfidf_matrix.npz")
+VERSE_INFO_FILE = os.path.join(CACHE_DIR, "verse_info.json")
 
-_model = None
-_embeddings = None
+_vectorizer = None
+_tfidf_matrix = None
 _verse_info = None
+
+_semantic_model = None
 _favorite_verses = set()
 
-MODEL_NAME = "all-MiniLM-L6-v2"
-
-# Phrases that strongly suggest a Bible quote is being spoken
 QUOTE_INDICATORS = [
     "the scripture says", "the bible says", "the word of god", "it is written",
     "as it is written", "for it is written", "for the scripture", "as the scripture",
@@ -36,12 +38,11 @@ QUOTE_INDICATORS = [
 ]
 
 
-def _get_model():
-    global _model
-    if _model is None:
-        print("  Loading semantic search model...")
-        _model = SentenceTransformer(MODEL_NAME)
-    return _model
+def _clean_text(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def _load_verse_data():
@@ -58,45 +59,82 @@ def _load_verse_data():
     ]
 
 
-def _compute_and_cache_embeddings(verses):
-    os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
-    model = _get_model()
-    texts = [v["text"] for v in verses]
-    print(f"  Computing embeddings for {len(texts)} verses (first run, may take a minute)...")
-    embeddings = model.encode(texts, show_progress_bar=True, batch_size=64)
-    np.save(EMBEDDINGS_FILE, embeddings)
+def _build_index():
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    verses = _load_verse_data()
+    texts = [_clean_text(v["text"]) for v in verses]
+    print("  Building TF-IDF search index (~30 seconds)...")
+    vectorizer = TfidfVectorizer(
+        max_features=50000, ngram_range=(1, 3),
+        stop_words="english", sublinear_tf=True,
+    )
+    matrix = vectorizer.fit_transform(texts)
+    print(f"  TF-IDF done: {matrix.shape[0]} verses, {matrix.shape[1]} terms")
+    dump(vectorizer, VECTORIZER_FILE)
+    from scipy.sparse import save_npz
+    save_npz(MATRIX_FILE, matrix)
     with open(VERSE_INFO_FILE, "w", encoding="utf-8") as f:
         json.dump(verses, f, ensure_ascii=False)
-    print(f"  Cached {len(embeddings)} verse embeddings to disk")
-    return embeddings, verses
+    print(f"  Cached to {CACHE_DIR}")
+    return vectorizer, matrix, verses
 
 
-def _load_cached_embeddings():
-    embeddings = np.load(EMBEDDINGS_FILE)
+def _load_index():
+    from scipy.sparse import load_npz
+    vectorizer = jload(VECTORIZER_FILE)
+    matrix = load_npz(MATRIX_FILE)
     with open(VERSE_INFO_FILE, "r", encoding="utf-8") as f:
         verses = json.load(f)
-    return embeddings, verses
+    return vectorizer, matrix, verses
 
 
 def ensure_embeddings():
-    global _embeddings, _verse_info
-    if _embeddings is not None and _verse_info is not None:
+    global _vectorizer, _tfidf_matrix, _verse_info
+    if _vectorizer is not None and _tfidf_matrix is not None:
         return True
-    if os.path.exists(EMBEDDINGS_FILE) and os.path.exists(VERSE_INFO_FILE):
+    if os.path.exists(MATRIX_FILE) and os.path.exists(VERSE_INFO_FILE):
         try:
-            _embeddings, _verse_info = _load_cached_embeddings()
-            print(f"  Loaded {len(_embeddings)} cached verse embeddings")
+            _vectorizer, _tfidf_matrix, _verse_info = _load_index()
+            print(f"  Loaded cached TF-IDF index ({_tfidf_matrix.shape[0]} verses)")
             return True
         except Exception as e:
-            print(f"  Cache load failed: {e}, recomputing...")
-    verses = _load_verse_data()
-    _embeddings, _verse_info = _compute_and_cache_embeddings(verses)
+            print(f"  Cache load failed: {e}, rebuilding...")
+    _vectorizer, _tfidf_matrix, _verse_info = _build_index()
     return True
 
 
-def embed_text(text):
-    model = _get_model()
-    return model.encode([text], show_progress_bar=False)[0]
+def _get_semantic_model():
+    global _semantic_model
+    if _semantic_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            print("  Loading semantic re-ranker model...")
+            _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            print(f"  Semantic model unavailable (re-ranking disabled): {e}")
+    return _semantic_model
+
+
+def _rerank_with_semantic(query_text, candidates, top_k):
+    model = _get_semantic_model()
+    if model is None:
+        return candidates[:top_k]
+    verse_texts = [c["text"] for c in candidates]
+    query_emb = model.encode([_clean_text(query_text)], show_progress_bar=False)[0]
+    verse_embs = model.encode(verse_texts, show_progress_bar=False)
+    sims = np.dot(verse_embs, query_emb) / (
+        np.linalg.norm(verse_embs, axis=1) * np.linalg.norm(query_emb) + 1e-8
+    )
+    scored = [(i, float(sim)) for i, sim in enumerate(sims)]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    reranked = []
+    for i, sim in scored[:top_k]:
+        c = dict(candidates[i])
+        semantic_conf = max(0, min(100, int((sim - 0.2) / 0.8 * 100)))
+        c["confidence"] = max(c["confidence"], semantic_conf)
+        c["type"] = "semantic"
+        reranked.append(c)
+    return reranked
 
 
 def might_be_quote(text):
@@ -110,30 +148,29 @@ def might_be_quote(text):
 
 
 def search_similar_verses(query_text, translation=None, context_book=None, context_chapter=None, top_k=5):
-    global _embeddings, _verse_info
-    if _embeddings is None or _verse_info is None:
+    global _vectorizer, _tfidf_matrix, _verse_info
+    if _vectorizer is None or _tfidf_matrix is None:
         ensure_embeddings()
 
-    query_emb = embed_text(query_text)
-    norms = np.linalg.norm(_embeddings, axis=1)
-    query_norm = np.linalg.norm(query_emb)
-    if query_norm == 0:
+    cleaned = _clean_text(query_text)
+    if not cleaned:
         return []
-    similarities = np.dot(_embeddings, query_emb) / (norms * query_norm)
+
+    query_vec = _vectorizer.transform([cleaned])
+    similarities = (_tfidf_matrix @ query_vec.T).toarray().flatten()
 
     if translation:
         mask = np.array([v["translation"] == translation for v in _verse_info])
         similarities[~mask] = -1
 
-    top_indices = np.argsort(similarities)[-top_k * 3:][::-1]
+    top_n = min(top_k * 10, len(similarities))
+    top_indices = np.argsort(similarities)[-top_n:][::-1]
 
-    results = []
+    candidates = []
     seen_refs = set()
     for idx in top_indices:
-        if len(results) >= top_k:
-            break
         sim = float(similarities[idx])
-        if sim < 0.3:
+        if sim < 0.05:
             continue
         verse = _verse_info[idx]
         ref_key = f"{verse['book']}|{verse['chapter']}|{verse['verse']}|{verse['translation']}"
@@ -141,19 +178,17 @@ def search_similar_verses(query_text, translation=None, context_book=None, conte
             continue
         seen_refs.add(ref_key)
 
-        confidence = max(0, min(100, int((sim - 0.3) / 0.7 * 100)))
-
+        confidence = max(0, min(100, int((sim - 0.05) / 0.4 * 100)))
         if context_book and verse["book"].lower() == context_book.lower():
             if context_chapter and verse["chapter"] == context_chapter:
                 confidence = min(100, confidence + 25)
             else:
                 confidence = min(100, confidence + 15)
-
         fav_ref = f"{verse['book']} {verse['chapter']}:{verse['verse']}"
         if fav_ref in _favorite_verses:
             confidence = min(100, confidence + 10)
 
-        results.append({
+        candidates.append({
             "raw_match": query_text,
             "book": verse["book"],
             "chapter": verse["chapter"],
@@ -165,8 +200,15 @@ def search_similar_verses(query_text, translation=None, context_book=None, conte
             "type": "semantic",
         })
 
-    results.sort(key=lambda r: r["confidence"], reverse=True)
-    return results
+    candidates.sort(key=lambda r: r["confidence"], reverse=True)
+    candidates = candidates[:top_k * 3]
+
+    try:
+        candidates = _rerank_with_semantic(query_text, candidates, top_k)
+    except Exception as e:
+        print(f"  Re-ranking failed: {e}")
+
+    return candidates[:top_k]
 
 
 def set_favorite_verse(book, chapter, verse, favorite=True):
