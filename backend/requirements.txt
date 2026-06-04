@@ -4,3 +4,4 @@ websockets
 sounddevice
 numpy
 faster-whisper
+sentence-transformers
