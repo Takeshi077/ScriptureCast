@@ -480,6 +480,7 @@ manualLookupBtn.addEventListener('click', () => {
 
     send({ type: 'manual_verse', verse_text: text });
     lookupPreview.classList.add('hidden');
+    manualInput.value = '';
 });
 
 manualInput.addEventListener('keydown', (e) => {
