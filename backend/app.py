@@ -8,11 +8,13 @@ from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
 from .transcriber import init_model, start_transcribing, stop_transcribing
+from .semantic import ensure_embeddings, search_similar_verses, might_be_quote
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load ASR model then start transcription background thread
+    # Startup: Load ASR model, semantic embeddings, then start transcription
     init_model()
+    ensure_embeddings()
     loop = asyncio.get_running_loop()
     def handle_transcription(text):
         asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True), loop)
@@ -29,7 +31,9 @@ state = {
     "current_translation": "KJV",
     "display_duration": 15,
     "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
-    "recent_transcripts": []    # List of {"text": "...", "is_final": bool}
+    "recent_transcripts": [],   # List of {"text": "...", "is_final": bool}
+    "context_book": None,       # Last displayed book (for QV-07 context awareness)
+    "context_chapter": None,    # Last displayed chapter
 }
 
 # Connected clients
@@ -48,6 +52,11 @@ async def set_active_scripture(scripture_data):
         auto_clear_task = None
 
     state["active_scripture"] = scripture_data
+
+    # Track context for semantic search (QV-07)
+    if scripture_data is not None and scripture_data.get("book"):
+        state["context_book"] = scripture_data["book"]
+        state["context_chapter"] = scripture_data.get("chapter")
 
     # Schedule auto-clear if duration is set
     duration = state.get("display_duration", 0)
@@ -101,9 +110,46 @@ async def broadcast_state():
         "current_translation": state["current_translation"],
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
-        "recent_transcripts": state["recent_transcripts"]
+        "recent_transcripts": state["recent_transcripts"],
+        "context_book": state.get("context_book"),
+        "context_chapter": state.get("context_chapter"),
     })
     await asyncio.gather(*[ws.send_text(message) for ws in active_websockets])
+
+async def _display_candidate(candidate):
+    """Look up full verse text and display it."""
+    scripture = get_scripture(
+        state["current_translation"],
+        candidate["book"],
+        candidate["chapter"],
+        candidate["verse_start"],
+        candidate["verse_end"]
+    )
+    if "error" not in scripture and scripture["verses"]:
+        await set_active_scripture({
+            "reference": scripture["reference"],
+            "text": scripture["combined_text"],
+            "book": candidate["book"],
+            "chapter": candidate["chapter"],
+            "verse_start": candidate["verse_start"],
+            "verse_end": candidate["verse_end"]
+        })
+        return True
+    return False
+
+
+async def _merge_candidates(regex_candidates, semantic_candidates):
+    """Merge regex and semantic candidates, deduplicating by reference."""
+    seen = set()
+    merged = []
+    for c in regex_candidates + semantic_candidates:
+        key = f"{c['book']}|{c['chapter']}|{c.get('verse_start')}|{c.get('verse_end')}"
+        if key not in seen:
+            seen.add(key)
+            merged.append(c)
+    merged.sort(key=lambda c: c["confidence"], reverse=True)
+    return merged
+
 
 # Helper to process transcript text and detect verses
 async def process_transcript(text: str, is_final: bool = False):
@@ -121,8 +167,27 @@ async def process_transcript(text: str, is_final: bool = False):
     if active_websockets:
         await asyncio.gather(*[ws.send_text(transcript_msg) for ws in active_websockets])
     
-    # Parse text for verses
-    candidates = parse_text_for_verses(text)
+    # Only run detection on final transcripts
+    if not is_final:
+        return
+
+    # Step 1: Parse with regex for explicit references
+    regex_candidates = parse_text_for_verses(text)
+
+    # Step 2: Run semantic search for quotes without references (QV-01, QV-02, QV-03)
+    semantic_candidates = []
+    if not regex_candidates or might_be_quote(text):
+        semantic_candidates = search_similar_verses(
+            text,
+            translation=state["current_translation"],
+            context_book=state.get("context_book"),
+            context_chapter=state.get("context_chapter"),
+            top_k=3 if regex_candidates else 5
+        )
+
+    # Step 3: Merge all candidates
+    candidates = await _merge_candidates(regex_candidates, semantic_candidates)
+
     if candidates:
         # Broadcast candidates to the operator dashboard
         candidates_msg = json.dumps({
@@ -132,28 +197,11 @@ async def process_transcript(text: str, is_final: bool = False):
         if active_websockets:
             await asyncio.gather(*[ws.send_text(candidates_msg) for ws in active_websockets])
         
-        # Check if we have a high-confidence candidate to auto-display
-        # VD-05: 85% auto-display
-        high_conf_candidates = [c for c in candidates if c["confidence"] >= 85]
-        if high_conf_candidates:
-            # Display the first high-confidence match
-            candidate = high_conf_candidates[0]
-            scripture = get_scripture(
-                state["current_translation"],
-                candidate["book"],
-                candidate["chapter"],
-                candidate["verse_start"],
-                candidate["verse_end"]
-            )
-            if "error" not in scripture and scripture["verses"]:
-                await set_active_scripture({
-                    "reference": scripture["reference"],
-                    "text": scripture["combined_text"],
-                    "book": candidate["book"],
-                    "chapter": candidate["chapter"],
-                    "verse_start": candidate["verse_start"],
-                    "verse_end": candidate["verse_end"]
-                })
+        # QV-05: Auto-select highest >90% confidence, or show top 2-3
+        high_conf = [c for c in candidates if c["confidence"] >= 90]
+        if high_conf:
+            # Auto-display the highest-confidence match
+            await _display_candidate(high_conf[0])
 
 # WebSocket endpoint
 @app.websocket("/ws")
@@ -167,7 +215,9 @@ async def websocket_endpoint(websocket: WebSocket):
         "current_translation": state["current_translation"],
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
-        "recent_transcripts": state["recent_transcripts"]
+        "recent_transcripts": state["recent_transcripts"],
+        "context_book": state.get("context_book"),
+        "context_chapter": state.get("context_chapter"),
     }))
     
     try:
@@ -195,23 +245,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
                 if candidates:
-                    candidate = candidates[0]
-                    scripture = get_scripture(
-                        state["current_translation"],
-                        candidate["book"],
-                        candidate["chapter"],
-                        candidate["verse_start"],
-                        candidate["verse_end"]
-                    )
-                    if "error" not in scripture and scripture["verses"]:
-                        await set_active_scripture({
-                            "reference": scripture["reference"],
-                            "text": scripture["combined_text"],
-                            "book": candidate["book"],
-                            "chapter": candidate["chapter"],
-                            "verse_start": candidate["verse_start"],
-                            "verse_end": candidate["verse_end"]
-                        })
+                    await _display_candidate(candidates[0])
                         
             elif msg_type == "manual_override":
                 await set_active_scripture({

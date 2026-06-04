@@ -314,13 +314,21 @@ function renderCandidates(candidates) {
 
         const refStr = buildRefString(candidate);
         const confClass = candidate.confidence >= 85 ? 'conf-high' : candidate.confidence >= 65 ? 'conf-medium' : 'conf-low';
+        const isSemantic = candidate.type === 'semantic';
+
+        const typeLabel = isSemantic
+            ? '<span class="candidate-type semantic">Quote</span>'
+            : '<span class="candidate-type regex">Reference</span>';
 
         item.innerHTML = `
             <div class="candidate-row">
                 <span class="candidate-ref">${escHtml(refStr)}</span>
-                <span class="candidate-confidence ${confClass}">${candidate.confidence}%</span>
+                <span class="candidate-meta">
+                    ${typeLabel}
+                    <span class="candidate-confidence ${confClass}">${candidate.confidence}%</span>
+                </span>
             </div>
-            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g,'_')}">Loading…</div>
+            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g,'_')}">${isSemantic && candidate.text ? escHtml('"' + candidate.text + '"') : 'Loading…'}</div>
             <div class="candidate-actions">
                 <button class="btn btn-primary disp-btn" aria-label="Display ${escHtml(refStr)} on projector">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
@@ -330,8 +338,10 @@ function renderCandidates(candidates) {
             </div>
         `;
 
-        // Fetch verse preview text
-        fetchVersePreview(candidate, item.querySelector('.candidate-preview'));
+        // Only fetch preview for regex matches (semantic already has text)
+        if (!isSemantic) {
+            fetchVersePreview(candidate, item.querySelector('.candidate-preview'));
+        }
 
         // Display Now button
         item.querySelector('.disp-btn').addEventListener('click', () => {
