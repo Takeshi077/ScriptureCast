@@ -96,10 +96,12 @@ def ensure_embeddings():
         try:
             _vectorizer, _tfidf_matrix, _verse_info = _load_index()
             print(f"  Loaded cached TF-IDF index ({_tfidf_matrix.shape[0]} verses)")
-            return True
         except Exception as e:
             print(f"  Cache load failed: {e}, rebuilding...")
-    _vectorizer, _tfidf_matrix, _verse_info = _build_index()
+            _vectorizer, _tfidf_matrix, _verse_info = _build_index()
+    else:
+        _vectorizer, _tfidf_matrix, _verse_info = _build_index()
+    _get_semantic_model()
     return True
 
 
