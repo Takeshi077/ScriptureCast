@@ -46,3 +46,13 @@ INFO:     127.0.0.1:62161 - "GET /api/verse?book=John&chapter=1&verse=5 HTTP/1.1
   ASR: Thank you, Doug.
   ASR: Kaleen, ah, Kaleen, ah, Kaleen.
 INFO:     127.0.0.1:63729 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63750 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63751 - "GET /frontend/js/dashboard.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63750 - "GET /frontend/css/dashboard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=1&verse=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=1&verse=4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=1&verse=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63753 - "GET /api/verse?book=John&chapter=6&verse=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63770 - "GET /api/verse?book=John&chapter=1&verse=6 HTTP/1.1" 200 OK
