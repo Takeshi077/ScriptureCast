@@ -64,6 +64,9 @@ function connect() {
             case 'candidate_verses':
                 handleCandidates(msg.candidates);
                 break;
+            case 'manual_verse_result':
+                handleManualVerseResult(msg);
+                break;
         }
     };
 
@@ -398,6 +401,13 @@ function displayCandidate(candidate) {
         type: 'manual_verse',
         verse_text: buildRefString(candidate)
     });
+}
+
+// ── Manual Verse Result Handler ─────────────────────────────
+function handleManualVerseResult(msg) {
+    lookupPreview.classList.remove('hidden');
+    lookupRefLabel.textContent = msg.reference;
+    lookupTextPrev.textContent = `"${msg.text}"`;
 }
 
 // ── Projector Preview Update ───────────────────────────────
