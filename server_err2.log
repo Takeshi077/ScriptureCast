@@ -1,0 +1,8 @@
+INFO:     Started server process [18072]
+INFO:     Waiting for application startup.
+'[Errno 11001] getaddrinfo failed' thrown while requesting HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json
+Retrying in 1s [Retry 1/5].
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63409 - "WebSocket /ws" [accepted]
+INFO:     connection open

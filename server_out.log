@@ -12,18 +12,3 @@
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
   Microphone input active — waiting for speech…
-  ASR: The beginning was the world and the world was the world.
-INFO:     127.0.0.1:62498 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62500 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1" 200 OK
-  ASR: Because, don't want to be a star.
-  ASR: Hello ma, Motive ma, ashama, ashama
-  ASR: Bear Bear
-  ASR: My mommy.
-  ASR: Come on, I got it all on.
-  ASR: I don't even know what I'm talking about, I don't even know what I'm talking about.
-  ASR: I'm going to call you by 10.30, you can call me at 10.00
-  ASR: I'm one of a kind
-INFO:     127.0.0.1:63198 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63198 - "GET /frontend/css/dashboard.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63198 - "GET /frontend/js/dashboard.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63215 - "GET /api/verse?book=Genesis&chapter=1&verse=1 HTTP/1.1" 200 OK
