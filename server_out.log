@@ -20,3 +20,21 @@ INFO:     127.0.0.1:65020 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1
 INFO:     127.0.0.1:65021 - "GET /api/verse?book=Joshua&chapter=1&verse=4 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:65021 - "GET /api/verse?book=John&chapter=1&verse=5 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:65040 - "GET /api/verse?book=John&chapter=1&verse=7 HTTP/1.1" 200 OK
+  ASR: Don't worry, it's...
+  ASR: don't run this bitch
+  ASR: don't shop the world with it
+  ASR: George, up to our list, it's...
+  ASR: It's...
+  ASR: the office it's
+  ASR: Joshop, don't have this, it's...
+  ASR: You lullaby!
+  ASR: I'm not too shocked on this one.
+  ASR: Matiu, Shaftama, this one.
+  ASR: This one.
+  ASR: Matthew, shut up on this one.
+  ASR: You should have done best, too.
+  ASR: I wish you had a good time.
+  ASR: shaft on the base for
+  ASR: Hello?
+  ASR: I'm going to shut Sengani.
+INFO:     127.0.0.1:65314 - "GET / HTTP/1.1" 200 OK
