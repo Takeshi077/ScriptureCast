@@ -229,8 +229,13 @@ async def _quote_detection_loop():
     """Background loop: every 1.5s, extract phrases from rolling buffer and match against Bible verses."""
     while True:
         await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
+
+        # Always broadcast current state (rolling buffer, detected quotes) at this interval
+        await broadcast_state()
+
         if not state.get("quote_detection_enabled", True):
             continue
+
         text = _get_recent_buffer_text()
         if not text or len(text.split()) < QUOTE_PHRASE_MIN:
             continue
@@ -356,6 +361,9 @@ async def websocket_endpoint(websocket: WebSocket):
         "recent_transcripts": state["recent_transcripts"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
+        "rolling_buffer_text": _get_recent_buffer_text(),
+        "detected_quotes": state.get("detected_quotes", []),
+        "quote_detection_enabled": state.get("quote_detection_enabled", True),
     }))
     
     try:
