@@ -11,3 +11,7 @@
   ASR model loaded successfully.
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
+  Microphone input active — waiting for speech…
+  ASR: The beginning was the world and the world was the world.
+INFO:     127.0.0.1:62498 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62500 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1" 200 OK
