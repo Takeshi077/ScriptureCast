@@ -110,7 +110,7 @@ async def _safe_send(message_str):
         except Exception:
             dead.add(ws)
     if dead:
-        active_websockets -= dead
+        active_websockets.difference_update(dead)
 
 # Helper to broadcast state to all clients
 async def broadcast_state():
