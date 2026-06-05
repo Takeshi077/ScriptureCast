@@ -19,3 +19,5 @@ ConnectionClosedOK exception in shielded future
 future: <Future finished exception=ConnectionClosedOK(Close(code=1001, reason=''), Close(code=1001, reason=''), True)>
 websockets.exceptions.ConnectionClosedOK: received 1001 (going away); then sent 1001 (going away)
 INFO:     connection closed
+INFO:     127.0.0.1:63754 - "WebSocket /ws" [accepted]
+INFO:     connection open
