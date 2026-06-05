@@ -180,12 +180,8 @@ function initSpeechRecognition() {
                     lastInterimEl.remove();
                 }
                 lastInterimEl = null;
-                if (hasVerseReference(text)) {
-                    handleTranscript(text, true);
-                    send({ type: 'simulated_speech', text });
-                } else {
-                    handleTranscript(text, true);
-                }
+                handleTranscript(text, true);
+                send({ type: 'simulated_speech', text });
             }
         }
     };
@@ -616,8 +612,8 @@ function updateQuoteDetectionStatus(enabled) {
 // Quote detection toggle
 if (quoteToggleBtn) {
     quoteToggleBtn.addEventListener('click', () => {
-        const currentlyEnabled = quoteToggleBtn.textContent === 'Pause';
-        send({ type: 'toggle_quote_detection', enabled: !currentlyEnabled });
+        const isActive = quoteToggleBtn.textContent.trim() === 'Pause';
+        send({ type: 'toggle_quote_detection', enabled: !isActive });
     });
 }
 
