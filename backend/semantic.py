@@ -118,6 +118,8 @@ def _get_semantic_model():
 
 
 def _rerank_with_semantic(query_text, candidates, top_k):
+    if not candidates:
+        return []
     model = _get_semantic_model()
     if model is None:
         return candidates[:top_k]

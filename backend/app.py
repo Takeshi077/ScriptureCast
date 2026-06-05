@@ -101,6 +101,17 @@ async def _reload_active_scripture():
     else:
         await clear_active_scripture()
 
+async def _safe_send(message_str):
+    """Send a message to all connected websockets, removing dead connections."""
+    dead = set()
+    for ws in list(active_websockets):
+        try:
+            await ws.send_text(message_str)
+        except Exception:
+            dead.add(ws)
+    if dead:
+        active_websockets -= dead
+
 # Helper to broadcast state to all clients
 async def broadcast_state():
     if not active_websockets:
@@ -114,7 +125,7 @@ async def broadcast_state():
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
     })
-    await asyncio.gather(*[ws.send_text(message) for ws in active_websockets])
+    await _safe_send(message)
 
 async def _display_candidate(candidate):
     """Look up full verse text and display it."""
@@ -165,7 +176,7 @@ async def process_transcript(text: str, is_final: bool = False):
         "is_final": is_final
     })
     if active_websockets:
-        await asyncio.gather(*[ws.send_text(transcript_msg) for ws in active_websockets])
+        await _safe_send(transcript_msg)
     
     # Only run detection on final transcripts
     if not is_final:
@@ -195,7 +206,7 @@ async def process_transcript(text: str, is_final: bool = False):
             "candidates": candidates
         })
         if active_websockets:
-            await asyncio.gather(*[ws.send_text(candidates_msg) for ws in active_websockets])
+            await _safe_send(candidates_msg)
         
         # QV-05: Auto-select highest >90% confidence, or show top 2-3
         high_conf = [c for c in candidates if c["confidence"] >= 90]
@@ -246,6 +257,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 candidates = parse_text_for_verses(verse_text)
                 if candidates:
                     await _display_candidate(candidates[0])
+                    scripture = get_scripture(
+                        state["current_translation"],
+                        candidates[0]["book"],
+                        candidates[0]["chapter"],
+                        candidates[0]["verse_start"],
+                        candidates[0]["verse_end"]
+                    )
+                    if "error" not in scripture and scripture["verses"]:
+                        await websocket.send_text(json.dumps({
+                            "type": "manual_verse_result",
+                            "reference": scripture["reference"],
+                            "text": scripture["combined_text"]
+                        }))
                         
             elif msg_type == "manual_override":
                 await set_active_scripture({
