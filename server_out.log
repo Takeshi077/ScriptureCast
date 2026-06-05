@@ -13,3 +13,14 @@
   Loading semantic re-ranker model...
   Microphone input active — waiting for speech…
 INFO:     127.0.0.1:64696 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64732 - "GET / HTTP/1.1" 200 OK
+  ASR: The beginning was the right.
+  ASR: in the beginning was the word.
+  ASR: In the beginning was the word and the word was the...
+  ASR: For God's soul of the world, the idea was only because of the song.
+WebSocket error: cannot access local variable 'active_websockets' where it is not associated with a value
+  ASR: I'm going to be sure.
+WebSocket error: cannot access local variable 'active_websockets' where it is not associated with a value
+  ASR: Thank you very much.
+  ASR: Don't worry about this one.
+INFO:     127.0.0.1:64847 - "GET / HTTP/1.1" 200 OK
