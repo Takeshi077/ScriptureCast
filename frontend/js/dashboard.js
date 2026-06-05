@@ -48,7 +48,13 @@ let displayDuration = 15;
 let currentCandidates = [];
 
 // ── WebSocket ──────────────────────────────────────────────
+let _reconnectTimer = null;
+
 function connect() {
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
     setConnectionStatus('connecting');
     socket = new WebSocket(WS_URL);
 
@@ -81,7 +87,8 @@ function connect() {
 
     socket.onclose = () => {
         setConnectionStatus('error');
-        setTimeout(connect, 3000);
+        if (_reconnectTimer) clearTimeout(_reconnectTimer);
+        _reconnectTimer = setTimeout(connect, 3000);
     };
 
     socket.onerror = () => {
