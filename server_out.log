@@ -17,3 +17,32 @@ INFO:     127.0.0.1:62130 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1
 INFO:     127.0.0.1:62130 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62131 - "GET /api/verse?book=John&chapter=1&verse=4 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62161 - "GET /api/verse?book=John&chapter=1&verse=5 HTTP/1.1" 200 OK
+  ASR: I like to be blind, not to mess with you.
+  ASR: tell me everything shit  me dumb and dumb and I'm all pretty  c-B-B-B-Bash  oh my need that template is a certificate of  every day it's supposed to start the video on convocation
+  ASR: there
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: I need more place, I'll check it place.
+  ASR: I will see you in the next video.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: Yeah, I see this title again in the corner, let's move on.
+  ASR: I'll finish out the transcript louder, then I'll do a little bit.
+  ASR: Bye bye, bye bye, bye.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: I'll ask my boyfriend to help her.
+  ASR: I want to try a collager, one in this.
+  ASR: the card you may have to inspire.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: I look at my back and I cut it.  Oh, oh, oh, oh, oh, oh, oh.
+  ASR: I am Los Alos.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: close-up
+  ASR: I'm gonna just track out for a water while it's on fire.  Hey I'm gonna love a water while it's on fire.
+  ASR: No, the show work and the show work, the show work, I don't need to consume much air.
+  ASR: No, I can't.  I can't.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: and I'll see you in the next video.
+  Re-ranking failed: shapes (0,) and (384,) not aligned: 0 (dim 0) != 384 (dim 0)
+  ASR: Thank you very much.
+  ASR: Thank you, Doug.
+  ASR: Kaleen, ah, Kaleen, ah, Kaleen.
+INFO:     127.0.0.1:63729 - "GET / HTTP/1.1" 200 OK
