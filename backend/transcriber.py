@@ -23,7 +23,7 @@ BLOCK_DURATION = 0.5          # seconds per audio block
 RMS_THRESHOLD = 0.02          # voice activity threshold
 SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
-MODEL_SIZE = "base"           # whisper model size (tiny/base/small/medium/large)
+MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large)
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -128,7 +128,7 @@ def _finalise_utterance(buffer, callback_fn):
         return
 
     try:
-        segments, _ = _model.transcribe(audio_np, beam_size=1, language="en")
+        segments, _ = _model.transcribe(audio_np, beam_size=3, language="en")
         text = " ".join(seg.text for seg in segments).strip()
         if text:
             print(f"  ASR: {text}")
