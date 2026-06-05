@@ -1,33 +1,8 @@
-INFO:     Started server process [22152]
+INFO:     Started server process [8376]
 INFO:     Waiting for application startup.
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3005.04it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3446.43it/s]
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:64048 - "WebSocket /ws" [accepted]
+INFO:     127.0.0.1:64937 - "WebSocket /ws" [accepted]
 INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64736 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:64745 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     connection closed
-INFO:     127.0.0.1:64837 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64841 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64851 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64857 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64859 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed
-INFO:     127.0.0.1:64874 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     connection closed

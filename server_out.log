@@ -12,15 +12,11 @@
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
   Microphone input active — waiting for speech…
-INFO:     127.0.0.1:64696 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64732 - "GET / HTTP/1.1" 200 OK
-  ASR: The beginning was the right.
-  ASR: in the beginning was the word.
-  ASR: In the beginning was the word and the word was the...
-  ASR: For God's soul of the world, the idea was only because of the song.
-WebSocket error: cannot access local variable 'active_websockets' where it is not associated with a value
-  ASR: I'm going to be sure.
-WebSocket error: cannot access local variable 'active_websockets' where it is not associated with a value
-  ASR: Thank you very much.
-  ASR: Don't worry about this one.
-INFO:     127.0.0.1:64847 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64988 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
+  ASR: John was a best too.
+INFO:     127.0.0.1:65020 - "GET /api/verse?book=John&chapter=1&verse=2 HTTP/1.1" 200 OK
+  ASR: Don't worry about this too.
+  ASR: John Lombard Stevie.
+INFO:     127.0.0.1:65021 - "GET /api/verse?book=Joshua&chapter=1&verse=4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65021 - "GET /api/verse?book=John&chapter=1&verse=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65040 - "GET /api/verse?book=John&chapter=1&verse=7 HTTP/1.1" 200 OK
