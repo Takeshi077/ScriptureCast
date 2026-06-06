@@ -422,7 +422,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await process_transcript(speech_text, is_final=True)
                 
     except WebSocketDisconnect:
-        active_websockets.remove(websocket)
+        active_websockets.discard(websocket)
     except Exception as e:
         print("WebSocket error:", e)
         if websocket in active_websockets:
