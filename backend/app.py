@@ -301,15 +301,6 @@ async def process_transcript(text: str, is_final: bool = False):
             if entry["timestamp"] >= cutoff
         ]
     
-    # Broadcast raw transcript to clients (for scrolling display)
-    transcript_msg = json.dumps({
-        "type": "transcript",
-        "text": text,
-        "is_final": is_final
-    })
-    if active_websockets:
-        await _safe_send(transcript_msg)
-    
     # Only run detection on final transcripts
     if not is_final:
         return
