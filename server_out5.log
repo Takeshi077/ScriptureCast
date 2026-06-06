@@ -14,3 +14,10 @@
   Microphone input active — waiting for speech…
 INFO:     127.0.0.1:64287 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:64287 - "GET /screen HTTP/1.1" 200 OK
+  ASR: Thank you.
+  ASR: Thank you.
+  ASR: Thank you very much.
+  ASR: Thank you.
+INFO:     127.0.0.1:64622 - "GET /api/verse?book=Psalms&chapter=28&verse=9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64621 - "GET /api/verse?book=Numbers&chapter=1&verse=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64637 - "GET /api/verse?book=Psalms&chapter=19&verse=13 HTTP/1.1" 200 OK
