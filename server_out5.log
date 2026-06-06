@@ -11,16 +11,3 @@
   ASR model loaded successfully.
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
-  Microphone input active — waiting for speech…
-  ASR: I
-  ASR: Good luck.
-  ASR: Thank you.
-  ASR: You
-  ASR: Yeah
-  ASR: Thank you very much.
-  ASR: Ah, yeah, I slept like a little bit, but I don't sleep.  So I don't sleep at all.  I don't sleep all the time.
-  ASR: Oh, that's what I call it.  What?  It's your mom.  I know what I'm saying bro.  What happened to you?  I don't know what happened to you.  I don't know what happened to you.
-  ASR: Thank you very much.
-INFO:     127.0.0.1:62464 - "GET /screen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62464 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62464 - "GET /openapi.json HTTP/1.1" 200 OK
