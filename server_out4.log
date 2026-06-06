@@ -11,3 +11,12 @@
   ASR model loaded successfully.
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
+  Microphone input active — waiting for speech…
+  ASR: Don't go, bye-bye!
+  ASR: I don't pass, I won't.
+  ASR: Thank you.
+INFO:     127.0.0.1:49880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49881 - "GET /frontend/js/dashboard.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49880 - "GET /frontend/css/dashboard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49882 - "GET /api/verse?book=Genesis&chapter=1&verse=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49882 - "GET /api/verse?book=Genesis&chapter=1&verse=2 HTTP/1.1" 200 OK
