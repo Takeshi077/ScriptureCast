@@ -21,3 +21,5 @@ INFO:     127.0.0.1:64287 - "GET /screen HTTP/1.1" 200 OK
 INFO:     127.0.0.1:64622 - "GET /api/verse?book=Psalms&chapter=28&verse=9 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:64621 - "GET /api/verse?book=Numbers&chapter=1&verse=1 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:64637 - "GET /api/verse?book=Psalms&chapter=19&verse=13 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64682 - "GET /api/verse?book=John&chapter=1&verse=19 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64683 - "GET /api/verse?book=Numbers&chapter=14&verse=15 HTTP/1.1" 200 OK
