@@ -20,8 +20,8 @@ _model_lock = threading.Lock()
 SAMPLE_RATE = 16000
 CHANNELS = 1
 BLOCK_DURATION = 0.5          # seconds per audio block
-RMS_THRESHOLD = 0.02          # voice activity threshold
-SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
+RMS_THRESHOLD = 0.005         # voice activity threshold (lower = more sensitive)
+SILENCE_TIMEOUT = 2.5         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
 MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large)
 

@@ -140,8 +140,14 @@ function initSpeechRecognition() {
         setLiveLabel(false);
         micToggleBtn.disabled = true;
         micToggleBtn.title = 'Speech recognition not supported in this browser';
+        const placeholder = transcriptFeed.querySelector('.placeholder-text');
+        if (placeholder) placeholder.textContent = 'Speech recognition not supported in this browser. Use "Simulate Speech" below.';
         return;
     }
+
+    // Show hint to click mic
+    const placeholder = transcriptFeed.querySelector('.placeholder-text');
+    if (placeholder) placeholder.textContent = 'Click the microphone button to start speech recognition…';
 
     recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -187,7 +193,6 @@ function initSpeechRecognition() {
                     lastInterimEl.remove();
                 }
                 lastInterimEl = null;
-                handleTranscript(text, true);
                 send({ type: 'simulated_speech', text });
             }
         }
@@ -505,12 +510,7 @@ simSendBtn.addEventListener('click', () => {
     const text = simInput.value.trim();
     if (!text) return;
 
-    // Show it in transcript feed as if it were real audio
-    handleTranscript(text, true);
-
-    // Send to backend for verse detection
     send({ type: 'simulated_speech', text });
-
     simInput.value = '';
 });
 
@@ -624,35 +624,6 @@ if (quoteToggleBtn) {
     });
 }
 
-// ── Auto-start mic ──────────────────────────────────────────
-function autoStartMic() {
-    if (!recognition) {
-        initSpeechRecognition();
-    }
-    if (!recognition || isRecording) return;
-    try {
-        recognition.start();
-        isRecording = true;
-        micToggleBtn.classList.add('active');
-        setLiveLabel(true);
-    } catch {
-        const startOnInteraction = () => {
-            document.removeEventListener('click', startOnInteraction);
-            document.removeEventListener('touchstart', startOnInteraction);
-            if (!isRecording && recognition) {
-                try {
-                    recognition.start();
-                    isRecording = true;
-                    micToggleBtn.classList.add('active');
-                    setLiveLabel(true);
-                } catch {}
-            }
-        };
-        document.addEventListener('click', startOnInteraction, { once: true });
-        document.addEventListener('touchstart', startOnInteraction, { once: true });
-    }
-}
-
 // ── Boot ───────────────────────────────────────────────────
 connect();
-autoStartMic();
+initSpeechRecognition();
