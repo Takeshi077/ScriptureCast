@@ -54,6 +54,7 @@ function updateDisplay(activeScripture, durationSeconds) {
     if (activeScripture && activeScripture.text) {
         referenceEl.textContent = activeScripture.reference || '';
         textEl.textContent = `"${activeScripture.text}"`;
+        textEl.scrollTop = 0;
 
         container.classList.remove('hidden');
         requestAnimationFrame(() => {
