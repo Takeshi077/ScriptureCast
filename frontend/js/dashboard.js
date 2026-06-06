@@ -193,6 +193,7 @@ function initSpeechRecognition() {
                     lastInterimEl.remove();
                 }
                 lastInterimEl = null;
+                handleTranscript(text, true);
                 send({ type: 'simulated_speech', text });
             }
         }
@@ -510,6 +511,7 @@ simSendBtn.addEventListener('click', () => {
     const text = simInput.value.trim();
     if (!text) return;
 
+    handleTranscript(text, true);
     send({ type: 'simulated_speech', text });
     simInput.value = '';
 });
