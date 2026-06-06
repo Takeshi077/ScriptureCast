@@ -1,57 +1,65 @@
-// Establish WebSocket connection
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-let socket;
+const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 
 const container = document.getElementById('display-container');
 const referenceEl = document.getElementById('reference');
 const textEl = document.getElementById('scripture-text');
 
+let socket = null;
 let displayTimeout = null;
+let _reconnectTimer = null;
+let _lastState = null;
 
 function connect() {
-    socket = new WebSocket(wsUrl);
-    
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    socket = new WebSocket(WS_URL);
+
     socket.onopen = () => {
-        console.log('Display Screen connected to WebSocket server');
+        console.log('Screen connected to WebSocket server');
     };
-    
+
     socket.onmessage = (event) => {
-        const msg = jsonParse(event.data);
-        if (msg && msg.type === 'state') {
+        const msg = safeJson(event.data);
+        if (!msg) return;
+
+        if (msg.type === 'state') {
+            _lastState = msg;
             updateDisplay(msg.active_scripture, msg.display_duration);
         }
     };
-    
+
     socket.onclose = () => {
-        console.log('WebSocket connection closed. Reconnecting in 3 seconds...');
-        setTimeout(connect, 3000);
+        if (displayTimeout) {
+            clearTimeout(displayTimeout);
+            displayTimeout = null;
+        }
+        if (_reconnectTimer) clearTimeout(_reconnectTimer);
+        _reconnectTimer = setTimeout(connect, 2000);
     };
-    
-    socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+
+    socket.onerror = () => {
+        // onclose will handle reconnect
     };
 }
 
 function updateDisplay(activeScripture, durationSeconds) {
-    // Clear any existing fade-out timer
     if (displayTimeout) {
         clearTimeout(displayTimeout);
         displayTimeout = null;
     }
-    
-    if (activeScripture) {
-        // Show scripture
-        referenceEl.textContent = activeScripture.reference;
+
+    if (activeScripture && activeScripture.text) {
+        referenceEl.textContent = activeScripture.reference || '';
         textEl.textContent = `"${activeScripture.text}"`;
-        
+
         container.classList.remove('hidden');
-        // Small delay to trigger transition
-        setTimeout(() => {
+        requestAnimationFrame(() => {
             container.classList.add('visible');
-        }, 50);
-        
-        // Auto-clear duration countdown
+        });
+
         if (durationSeconds && durationSeconds > 0) {
             displayTimeout = setTimeout(() => {
                 hideDisplay();
@@ -64,21 +72,17 @@ function updateDisplay(activeScripture, durationSeconds) {
 
 function hideDisplay() {
     container.classList.remove('visible');
-    // Hide completely after fade transition completes (800ms in CSS)
     setTimeout(() => {
         if (!container.classList.contains('visible')) {
             container.classList.add('hidden');
+            referenceEl.textContent = '';
+            textEl.textContent = '';
         }
-    }, 800);
+    }, 700);
 }
 
-function jsonParse(str) {
-    try {
-        return JSON.parse(str);
-    } catch (e) {
-        return null;
-    }
+function safeJson(str) {
+    try { return JSON.parse(str); } catch { return null; }
 }
 
-// Start connection
 connect();
