@@ -8,3 +8,9 @@ INFO:     127.0.0.1:64939 - "WebSocket /ws" [accepted]
 INFO:     connection open
 INFO:     127.0.0.1:64942 - "WebSocket /ws" [accepted]
 INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:64978 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:65004 - "WebSocket /ws" [accepted]
+INFO:     connection open
