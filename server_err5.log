@@ -1,76 +1,4 @@
-INFO:     Started server process [3476]
+INFO:     Started server process [23512]
 INFO:     Waiting for application startup.
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 2971.23it/s]
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55861 - "WebSocket /ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:55863 - "WebSocket /ws" [accepted]
-INFO:     connection open
-ConnectionClosedError exception in shielded future
-future: <Future finished exception=ConnectionClosedError(None, Close(code=<CloseCode.INTERNAL_ERROR: 1011>, reason='keepalive ping timeout'), None)>
-Traceback (most recent call last):
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1276, in close_connection
-    await self.transfer_data_task
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 940, in transfer_data
-    message = await self.read_message()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1010, in read_message
-    frame = await self.read_data_frame(max_size=self.max_size)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1087, in read_data_frame
-    frame = await self.read_frame(max_size)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1144, in read_frame
-    frame = await Frame.read(
-            ^^^^^^^^^^^^^^^^^
-    ...<4 lines>...
-    )
-    ^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\framing.py", line 70, in read
-    data = await reader(2)
-           ^^^^^^^^^^^^^^^
-  File "C:\Python314\Lib\asyncio\streams.py", line 769, in readexactly
-    await self._wait_for_data('readexactly')
-  File "C:\Python314\Lib\asyncio\streams.py", line 539, in _wait_for_data
-    await self._waiter
-asyncio.exceptions.CancelledError
-
-The above exception was the direct cause of the following exception:
-
-websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
-ConnectionClosedError exception in shielded future
-future: <Future finished exception=ConnectionClosedError(None, Close(code=<CloseCode.INTERNAL_ERROR: 1011>, reason='keepalive ping timeout'), None)>
-Traceback (most recent call last):
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1276, in close_connection
-    await self.transfer_data_task
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 940, in transfer_data
-    message = await self.read_message()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1010, in read_message
-    frame = await self.read_data_frame(max_size=self.max_size)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1087, in read_data_frame
-    frame = await self.read_frame(max_size)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\protocol.py", line 1144, in read_frame
-    frame = await Frame.read(
-            ^^^^^^^^^^^^^^^^^
-    ...<4 lines>...
-    )
-    ^
-  File "C:\Users\user\AppData\Roaming\Python\Python314\site-packages\websockets\legacy\framing.py", line 70, in read
-    data = await reader(2)
-           ^^^^^^^^^^^^^^^
-  File "C:\Python314\Lib\asyncio\streams.py", line 769, in readexactly
-    await self._wait_for_data('readexactly')
-  File "C:\Python314\Lib\asyncio\streams.py", line 539, in _wait_for_data
-    await self._waiter
-asyncio.exceptions.CancelledError
-
-The above exception was the direct cause of the following exception:
-
-websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
-INFO:     connection closed
-INFO:     connection closed
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3598.82it/s]
