@@ -5,6 +5,7 @@ import asyncio
 import json
 import os
 import time
+import functools
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
@@ -229,6 +230,7 @@ def _is_recently_detected(ref_key):
 
 async def _quote_detection_loop():
     """Background loop: every 1.5s, extract phrases from rolling buffer and match against Bible verses."""
+    loop = asyncio.get_running_loop()
     while True:
         await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
 
@@ -245,13 +247,18 @@ async def _quote_detection_loop():
         if not phrases:
             continue
         for phrase in phrases:
+            # Yield control so WebSocket messages aren't starved
+            await asyncio.sleep(0)
             try:
-                candidates = search_similar_verses(
-                    phrase,
-                    translation=state["current_translation"],
-                    context_book=state.get("context_book"),
-                    context_chapter=state.get("context_chapter"),
-                    top_k=1
+                candidates = await loop.run_in_executor(
+                    None, functools.partial(
+                        search_similar_verses,
+                        phrase,
+                        translation=state["current_translation"],
+                        context_book=state.get("context_book"),
+                        context_chapter=state.get("context_chapter"),
+                        top_k=1
+                    )
                 )
             except Exception:
                 continue
