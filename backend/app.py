@@ -129,6 +129,8 @@ async def _safe_send(message_str):
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
+        except BaseException:
+            dead.add(ws)
     if dead:
         active_websockets.difference_update(dead)
 
@@ -344,18 +346,22 @@ async def websocket_endpoint(websocket: WebSocket):
     active_websockets.add(websocket)
     
     # Send initial state immediately
-    await websocket.send_text(json.dumps({
-        "type": "state",
-        "current_translation": state["current_translation"],
-        "display_duration": state["display_duration"],
-        "active_scripture": state["active_scripture"],
-        "recent_transcripts": state["recent_transcripts"],
-        "context_book": state.get("context_book"),
-        "context_chapter": state.get("context_chapter"),
-        "rolling_buffer_text": _get_recent_buffer_text(),
-        "detected_quotes": state.get("detected_quotes", []),
-        "quote_detection_enabled": state.get("quote_detection_enabled", True),
-    }))
+    try:
+        await websocket.send_text(json.dumps({
+            "type": "state",
+            "current_translation": state["current_translation"],
+            "display_duration": state["display_duration"],
+            "active_scripture": state["active_scripture"],
+            "recent_transcripts": state["recent_transcripts"],
+            "context_book": state.get("context_book"),
+            "context_chapter": state.get("context_chapter"),
+            "rolling_buffer_text": _get_recent_buffer_text(),
+            "detected_quotes": state.get("detected_quotes", []),
+            "quote_detection_enabled": state.get("quote_detection_enabled", True),
+        }))
+    except BaseException:
+        active_websockets.discard(websocket)
+        return
     
     try:
         while True:
@@ -391,11 +397,14 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidates[0]["verse_end"]
                     )
                     if "error" not in scripture and scripture["verses"]:
-                        await websocket.send_text(json.dumps({
-                            "type": "manual_verse_result",
-                            "reference": scripture["reference"],
-                            "text": scripture["combined_text"]
-                        }))
+                        try:
+                            await websocket.send_text(json.dumps({
+                                "type": "manual_verse_result",
+                                "reference": scripture["reference"],
+                                "text": scripture["combined_text"]
+                            }))
+                        except BaseException:
+                            pass
                         
             elif msg_type == "manual_override":
                 await set_active_scripture({
@@ -416,8 +425,9 @@ async def websocket_endpoint(websocket: WebSocket):
         active_websockets.discard(websocket)
     except Exception as e:
         print("WebSocket error:", e)
-        if websocket in active_websockets:
-            active_websockets.remove(websocket)
+        active_websockets.discard(websocket)
+    except BaseException:
+        active_websockets.discard(websocket)
 
 # HTML endpoints to serve frontend files directly for easy local opening
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

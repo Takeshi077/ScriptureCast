@@ -12,3 +12,24 @@
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
   Microphone input active — waiting for speech…
+INFO:     127.0.0.1:53375 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53375 - "GET /frontend/css/dashboard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53374 - "GET /frontend/js/dashboard.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53374 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+  ASR: move on to the next verse. So there's also the code to verse which I termed a semantic machine like  probably the bastard expression it didn't say the particular verse but it probably said like um  for God's sake not the word I give what it's only begotten son uh scripture cast is able to  figure out with the particular verse the bastard is talking about and automatically finds the  verse which is John Thomas' thing and it also displays it automatically.  Why the fuck is wrong with this? Okay, here it is.  You're pushing that shout though.
+  ASR: So here you are with this scripture cast. This is the left turn. I've not done the  lander page yet but I just wanted to make sure it works first.
+  ASR: I'm coming, see you soon.
+  ASR: Can I see his nose?
+  ASR: Oh, no, don't go.
+INFO:     127.0.0.1:53459 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53497 - "GET / HTTP/1.1" 200 OK
+  ASR: Hm?  Hm?
+  ASR: So, something is wrong with song we are...
+  ASR: Okay, you guys can see dual screen, which is good.  This is the live transcript.  Something is wrong somewhere.  You fix it I'm coming.  So this is the live transcript.  Once you click like once.  Okay, you guys can see it.
+  ASR: Okay  Once you click on this  Microphone it automatically  No, like something is wrong like I'm just trying to fix this
+  ASR: What's going on? Not this evening, no.
+  ASR: I'm not sure it's network
+INFO:     127.0.0.1:53593 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53593 - "GET /screen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53593 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53593 - "GET /frontend/css/dashboard.css HTTP/1.1" 200 OK
