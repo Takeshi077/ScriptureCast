@@ -130,6 +130,8 @@ async def _safe_send(message_str):
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
+        except asyncio.CancelledError:
+            raise
         except BaseException:
             dead.add(ws)
     if dead:
