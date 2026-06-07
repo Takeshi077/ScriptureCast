@@ -72,6 +72,6 @@ if __name__ == "__main__":
         reload=False,
         log_level="info",
         ws_max_size=16777216,
-        ws_ping_interval=30,
-        ws_ping_timeout=10,
+        ws_ping_interval=None,
+        ws_ping_timeout=None,
     )
