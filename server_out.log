@@ -11,3 +11,9 @@
   ASR model loaded successfully.
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
+  Microphone input active — waiting for speech…
+  ASR: See, I think it's the, I think it's the right one.
+INFO:     127.0.0.1:54220 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54220 - "GET /screen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54262 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54262 - "GET /screen HTTP/1.1" 200 OK
