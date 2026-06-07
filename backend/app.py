@@ -130,8 +130,6 @@ async def _safe_send(message_str):
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
-        except asyncio.CancelledError:
-            raise
         except BaseException:
             dead.add(ws)
     if dead:
@@ -234,64 +232,70 @@ async def _quote_detection_loop():
     """Background loop: every 1.5s, extract phrases from rolling buffer and match against Bible verses."""
     loop = asyncio.get_running_loop()
     while True:
-        await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
+        try:
+            await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
 
-        # Always broadcast current state (rolling buffer, detected quotes) at this interval
-        await broadcast_state()
+            # Always broadcast current state (rolling buffer, detected quotes) at this interval
+            await broadcast_state()
 
-        if not state.get("quote_detection_enabled", True):
-            continue
-
-        text = _get_recent_buffer_text()
-        if not text or len(text.split()) < QUOTE_PHRASE_MIN:
-            continue
-        phrases = _extract_phrases(text)
-        if not phrases:
-            continue
-        for phrase in phrases:
-            # Yield control so WebSocket messages aren't starved
-            await asyncio.sleep(0)
-            try:
-                candidates = await loop.run_in_executor(
-                    None, functools.partial(
-                        search_similar_verses,
-                        phrase,
-                        translation=state["current_translation"],
-                        context_book=state.get("context_book"),
-                        context_chapter=state.get("context_chapter"),
-                        top_k=1
-                    )
-                )
-            except Exception:
+            if not state.get("quote_detection_enabled", True):
                 continue
-            for c in candidates:
-                if c["confidence"] >= QUOTE_CONFIDENCE_THRESHOLD:
-                    ref_key = f"{c['book']}|{c['chapter']}|{c['verse_start']}"
-                    if _is_recently_detected(ref_key):
-                        continue
-                    await _display_candidate(c)
-                    quote_entry = {
-                        "phrase": phrase,
-                        "reference": f"{c['book']} {c['chapter']}:{c['verse_start']}",
-                        "confidence": c["confidence"],
-                        "book": c["book"],
-                        "chapter": c["chapter"],
-                        "verse_start": c["verse_start"],
-                        "verse_end": c["verse_end"],
-                        "text": c.get("text", ""),
-                        "type": "semantic",
-                        "timestamp": time.time()
-                    }
-                    state["detected_quotes"].insert(0, quote_entry)
-                    if len(state["detected_quotes"]) > 15:
-                        state["detected_quotes"].pop()
-                    # Broadcast the new quote to all clients
-                    quote_msg = json.dumps({
-                        "type": "quote_detected",
-                        "quote": quote_entry
-                    })
-                    if active_websockets:
-                        await _safe_send(quote_msg)
+
+            text = _get_recent_buffer_text()
+            if not text or len(text.split()) < QUOTE_PHRASE_MIN:
+                continue
+            phrases = _extract_phrases(text)
+            if not phrases:
+                continue
+            for phrase in phrases:
+                # Yield control so WebSocket messages aren't starved
+                await asyncio.sleep(0)
+                try:
+                    candidates = await loop.run_in_executor(
+                        None, functools.partial(
+                            search_similar_verses,
+                            phrase,
+                            translation=state["current_translation"],
+                            context_book=state.get("context_book"),
+                            context_chapter=state.get("context_chapter"),
+                            top_k=1
+                        )
+                    )
+                except Exception:
+                    continue
+                for c in candidates:
+                    if c["confidence"] >= QUOTE_CONFIDENCE_THRESHOLD:
+                        ref_key = f"{c['book']}|{c['chapter']}|{c['verse_start']}"
+                        if _is_recently_detected(ref_key):
+                            continue
+                        await _display_candidate(c)
+                        quote_entry = {
+                            "phrase": phrase,
+                            "reference": f"{c['book']} {c['chapter']}:{c['verse_start']}",
+                            "confidence": c["confidence"],
+                            "book": c["book"],
+                            "chapter": c["chapter"],
+                            "verse_start": c["verse_start"],
+                            "verse_end": c["verse_end"],
+                            "text": c.get("text", ""),
+                            "type": "semantic",
+                            "timestamp": time.time()
+                        }
+                        state["detected_quotes"].insert(0, quote_entry)
+                        if len(state["detected_quotes"]) > 15:
+                            state["detected_quotes"].pop()
+                        # Broadcast the new quote to all clients
+                        quote_msg = json.dumps({
+                            "type": "quote_detected",
+                            "quote": quote_entry
+                        })
+                        if active_websockets:
+                            await _safe_send(quote_msg)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Log and continue — never let this loop die unexpectedly
+            pass
 
 
 # Helper to process transcript text and detect verses
