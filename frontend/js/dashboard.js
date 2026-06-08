@@ -32,6 +32,11 @@ const countdownTimer  = document.getElementById('countdown-timer');
 const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
 
+// Fallback text input DOM
+const textInputArea   = document.getElementById('text-input-area');
+const textInput       = document.getElementById('text-input');
+const textSendBtn     = document.getElementById('text-send-btn');
+
 // Quote Detection DOM
 const quoteStatus     = document.getElementById('quote-detection-status');
 const quoteToggleBtn  = document.getElementById('quote-toggle-btn');
@@ -133,13 +138,18 @@ function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
 }
 
+function showTextFallback() {
+    textInputArea.classList.remove('hidden');
+}
+
 function initSpeechRecognition() {
     if (!hasSpeechSupport()) {
         setLiveLabel(false);
         micToggleBtn.disabled = true;
         micToggleBtn.title = 'Speech recognition not supported in this browser';
         const placeholder = transcriptFeed.querySelector('.placeholder-text');
-        if (placeholder) placeholder.textContent = 'Speech recognition is not available in this browser. Try Chrome or Edge.';
+        if (placeholder) placeholder.textContent = 'Speech recognition is not available in this browser. Type text below instead.';
+        showTextFallback();
         return;
     }
 
@@ -199,6 +209,7 @@ function initSpeechRecognition() {
             setLiveLabel(false);
             micToggleBtn.classList.remove('active', 'speaking');
             isRecording = false;
+            showTextFallback();
         } else if (event.error === 'no-speech') {
             // Ignore — will restart automatically
         } else {
@@ -500,6 +511,22 @@ clearBtn.addEventListener('click', () => {
     send({ type: 'clear' });
 });
 
+// ── Fallback Text Input ────────────────────────────────────
+textSendBtn.addEventListener('click', () => {
+    const text = textInput.value.trim();
+    if (!text) return;
+
+    handleTranscript(text, true);
+    send({ type: 'transcript', text });
+    textInput.value = '';
+});
+
+textInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        textSendBtn.click();
+    }
+});
+
 // ── Manual Verse Lookup ────────────────────────────────────
 manualLookupBtn.addEventListener('click', () => {
     const text = manualInput.value.trim();
@@ -609,5 +636,15 @@ connect();
 initSpeechRecognition();
 // Auto-start browser speech recognition on page load
 if (hasSpeechSupport()) {
-    setTimeout(() => startRecording(), 500);
+    setTimeout(() => {
+        try {
+            recognition.start();
+            isRecording = true;
+            micToggleBtn.classList.add('active');
+            setLiveLabel(true);
+        } catch (e) {
+            console.warn('Auto-start failed:', e);
+            showTextFallback();
+        }
+    }, 500);
 }
