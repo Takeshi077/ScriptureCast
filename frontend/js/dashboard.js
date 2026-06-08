@@ -338,8 +338,6 @@ function handleStateUpdate(state) {
 
 // ── Transcript Handler ─────────────────────────────────────
 function handleTranscript(text, isFinal) {
-    setLiveLabel(true);
-
     if (isFinal) {
         const sep = fullTranscript ? ' ' : '';
         fullTranscript += sep + text;
@@ -656,17 +654,9 @@ if (quoteToggleBtn) {
 connect();
 initContinuousNote();
 initSpeechRecognition();
-// Auto-start browser speech recognition on page load
+// Note: Backend ASR (faster-whisper medium) is the primary speech-to-text engine.
+// Browser speech recognition is optional — toggle the mic button to use it.
+// The backend ASR streams transcriptions automatically via WebSocket.
 if (hasSpeechSupport()) {
-    setTimeout(() => {
-        try {
-            recognition.start();
-            isRecording = true;
-            micToggleBtn.classList.add('active');
-            setLiveLabel(true);
-        } catch (e) {
-            console.warn('Auto-start failed:', e);
-            showTextFallback();
-        }
-    }, 500);
+    micToggleBtn.title = 'Optional: click to use browser speech recognition as a backup';
 }
