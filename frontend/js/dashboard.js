@@ -6,7 +6,6 @@
 // ── Configuration ──────────────────────────────────────────
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
-const MAX_TRANSCRIPT_ITEMS = 25;
 
 // ── DOM References ─────────────────────────────────────────
 const connDot         = document.getElementById('conn-dot');
@@ -49,6 +48,9 @@ let countdownInterval = null;
 let countdownRemaining = 0;
 let displayDuration = 15;
 let currentCandidates = [];
+let fullTranscript = '';
+let interimText = '';
+let transcriptNote = null;
 
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
@@ -74,6 +76,7 @@ function connect() {
                 handleStateUpdate(msg);
                 break;
             case 'transcript':
+                // Server-sent transcript (from backend ASR)
                 handleTranscript(msg.text, msg.is_final);
                 break;
             case 'candidate_verses':
@@ -118,6 +121,29 @@ function setConnectionStatus(status) {
     }
 }
 
+// ── Continuous Note Display ─────────────────────────────────
+function initContinuousNote() {
+    const placeholder = transcriptFeed.querySelector('.placeholder-text');
+    if (placeholder) placeholder.remove();
+
+    transcriptNote = document.createElement('div');
+    transcriptNote.id = 'continuous-note';
+    transcriptNote.className = 'continuous-note';
+    transcriptFeed.appendChild(transcriptNote);
+}
+
+function updateTranscriptDisplay() {
+    if (!transcriptNote) {
+        initContinuousNote();
+    }
+    let display = fullTranscript;
+    if (interimText) {
+        display += ' ' + interimText;
+    }
+    transcriptNote.textContent = display || 'Waiting for audio input…';
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+}
+
 // ── Browser Speech Recognition ──────────────────────────────
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
@@ -126,12 +152,6 @@ let recognitionRestart = false;
 
 function hasSpeechSupport() {
     return !!SpeechRecognition;
-}
-
-// Quick client-side check if text contains a potential Bible reference
-function hasVerseReference(text) {
-    const bookPattern = /(?:genesis|gen|exodus|exo|leviticus|lev|numbers|num|deuteronomy|deut|joshua|josh|judges|judg|ruth|rut|samuel|sam|kings|chronicles|chron|ezra|ezr|nehemiah|neh|esther|esth|est|job|psalms?|psa|proverbs|prov|pro|ecclesiastes|ecc|song|isaiah|isa|jeremiah|jer|lamentations|lam|ezekiel|ezek|daniel|dan|hosea|hos|joel|amos|obadiah|jonah|micah|mic|nahum|habakkuk|hab|zephaniah|zeph|haggai|hag|zechariah|zech|malachi|mal|matthew|matt|mat|mark|luke|luk|john|joh|acts|romans|rom|corinthians|cor|galatians|gal|ephesians|eph|philippians|phil|colossians|col|thessalonians|thess|timothy|tim|titus|tit|philemon|philem|hebrews|hebr|heb|james|jas|peter|pet|jude|jud|revelation|rev|revel)\b/i;
-    return bookPattern.test(text);
 }
 
 function setLiveLabel(show) {
@@ -153,53 +173,46 @@ function initSpeechRecognition() {
         return;
     }
 
+    initContinuousNote();
+
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
 
-    let finalTranscript = '';
-
-    let lastInterimEl = null;
-
     recognition.onresult = (event) => {
-        let interimText = '';
-        finalTranscript = '';
+        let newInterim = '';
+        let newFinal = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const result = event.results[i];
             if (result.isFinal) {
-                finalTranscript += result[0].transcript;
+                newFinal += result[0].transcript;
             } else {
-                interimText += result[0].transcript;
+                newInterim += result[0].transcript;
             }
         }
+
+        if (newFinal) {
+            const text = newFinal.trim();
+            if (text) {
+                fullTranscript += (fullTranscript ? ' ' : '') + text;
+                send({ type: 'transcript', text });
+            }
+        }
+
+        interimText = newInterim.trim();
 
         if (interimText) {
             micToggleBtn.classList.add('speaking');
             setLiveLabel(true);
-            if (!lastInterimEl || lastInterimEl.classList.contains('final')) {
-                lastInterimEl = document.createElement('div');
-                lastInterimEl.className = 'transcript-chunk';
-                const placeholder = transcriptFeed.querySelector('.placeholder-text');
-                if (placeholder) placeholder.remove();
-                transcriptFeed.appendChild(lastInterimEl);
-            }
-            lastInterimEl.textContent = interimText.trim();
-            transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+        } else {
+            micToggleBtn.classList.remove('speaking');
         }
 
-        if (finalTranscript) {
-            const text = finalTranscript.trim();
-            if (text) {
-                if (lastInterimEl && !lastInterimEl.classList.contains('final')) {
-                    lastInterimEl.remove();
-                }
-                lastInterimEl = null;
-                handleTranscript(text, true);
-                send({ type: 'transcript', text });
-            }
+        if (newFinal || interimText) {
+            updateTranscriptDisplay();
         }
     };
 
@@ -302,28 +315,24 @@ function handleStateUpdate(state) {
     if (state.quote_detection_enabled !== undefined) {
         updateQuoteDetectionStatus(state.quote_detection_enabled);
     }
+
+    // Load full transcript from server on initial connect
+    if (state.full_transcript && !fullTranscript && !interimText) {
+        fullTranscript = state.full_transcript;
+        updateTranscriptDisplay();
+    }
 }
 
 // ── Transcript Handler ─────────────────────────────────────
 function handleTranscript(text, isFinal) {
     setLiveLabel(true);
 
-    const chunk = document.createElement('div');
-    chunk.className = 'transcript-chunk' + (isFinal ? ' final' : '');
-    chunk.textContent = text;
-
-    // Remove placeholder if present
-    const placeholder = transcriptFeed.querySelector('.placeholder-text');
-    if (placeholder) placeholder.remove();
-
-    transcriptFeed.appendChild(chunk);
-    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
-
-    // Trim old chunks
-    const chunks = transcriptFeed.querySelectorAll('.transcript-chunk');
-    if (chunks.length > MAX_TRANSCRIPT_ITEMS) {
-        chunks[0].remove();
+    if (isFinal) {
+        fullTranscript += (fullTranscript ? ' ' : '') + text;
+    } else {
+        interimText = text;
     }
+    updateTranscriptDisplay();
 }
 
 // ── Candidate Verses Handler ───────────────────────────────
@@ -338,11 +347,6 @@ function renderCandidates(candidates) {
     // Remove placeholder
     const placeholder = candidatesList.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
-
-    // Mark transcript entries that matched
-    document.querySelectorAll('.transcript-chunk.final:last-child').forEach(el => {
-        el.classList.add('has-match');
-    });
 
     candidates.forEach(candidate => {
         // Avoid duplicates already in list
@@ -633,6 +637,7 @@ if (quoteToggleBtn) {
 
 // ── Boot ───────────────────────────────────────────────────
 connect();
+initContinuousNote();
 initSpeechRecognition();
 // Auto-start browser speech recognition on page load
 if (hasSpeechSupport()) {
