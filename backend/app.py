@@ -429,8 +429,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 state["quote_detection_enabled"] = msg.get("enabled", True)
                 await broadcast_state()
 
-            elif msg_type == "simulated_speech":
-                # Simulated transcript message from dashboard
+            elif msg_type == "transcript":
                 speech_text = msg.get("text", "")
                 await process_transcript(speech_text, is_final=True)
                 
