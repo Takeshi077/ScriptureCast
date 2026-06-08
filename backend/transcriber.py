@@ -19,11 +19,11 @@ _model_lock = threading.Lock()
 # Audio capture settings
 SAMPLE_RATE = 16000
 CHANNELS = 1
-BLOCK_DURATION = 0.3          # seconds per audio block
-RMS_THRESHOLD = 0.005         # voice activity threshold (lower = more sensitive)
+BLOCK_DURATION = 0.2          # seconds per audio block
+RMS_THRESHOLD = 0.003         # voice activity threshold (lower = more sensitive)
 SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
-MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large or .en versions)
+MODEL_SIZE = "medium"         # whisper model size (tiny/base/small/medium/large-v3)
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -36,7 +36,7 @@ def init_model():
         try:
             from faster_whisper import WhisperModel
             print(f"  Loading faster-whisper ({MODEL_SIZE}) model… (first download may take a minute)")
-            _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8", local_files_only=True)
+            _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
             _model_ready = True
             print("  ASR model loaded successfully.")
             return True
@@ -120,6 +120,13 @@ def transcription_loop(callback_fn):
         while is_listening:
             time.sleep(1.0)
 
+def _normalise_audio(audio_np):
+    """Peak-normalise audio to [-1, 1] range for better Whisper accuracy."""
+    peak = np.max(np.abs(audio_np))
+    if peak > 0:
+        return audio_np / peak
+    return audio_np
+
 def _finalise_utterance(buffer, callback_fn):
     if not buffer or not _model_ready:
         return
@@ -127,10 +134,12 @@ def _finalise_utterance(buffer, callback_fn):
     if len(audio_np) < SAMPLE_RATE * 0.5:  # ignore <0.5s clips
         return
 
+    audio_np = _normalise_audio(audio_np)
+
     try:
         segments, _ = _model.transcribe(
             audio_np,
-            beam_size=1,
+            beam_size=5,
             language="en",
             vad_filter=True,
             vad_parameters=dict(min_silence_duration_ms=500)
