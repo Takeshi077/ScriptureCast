@@ -67,6 +67,12 @@
                 <p class="placeholder-text">Waiting for audio input…</p>
             </div>
 
+            <!-- Fallback text input (shown when speech is unavailable) -->
+            <div id="text-input-area" class="hidden">
+                <textarea id="text-input" placeholder="Type sermon text here (e.g. 'turn to John 3:16')…" rows="2"></textarea>
+                <button id="text-send-btn" class="btn btn-primary">Send</button>
+            </div>
+
             <!-- Manual Verse Lookup -->
             <div id="manual-card">
                 <h3>Manual Verse Lookup</h3>
