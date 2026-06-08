@@ -139,13 +139,9 @@ function initSpeechRecognition() {
         micToggleBtn.disabled = true;
         micToggleBtn.title = 'Speech recognition not supported in this browser';
         const placeholder = transcriptFeed.querySelector('.placeholder-text');
-        if (placeholder) placeholder.textContent = 'Speech recognition not supported in this browser. Use "Simulate Speech" below.';
+        if (placeholder) placeholder.textContent = 'Speech recognition is not available in this browser. Try Chrome or Edge.';
         return;
     }
-
-    // Show hint to click mic
-    const placeholder = transcriptFeed.querySelector('.placeholder-text');
-    if (placeholder) placeholder.textContent = 'Click the microphone button to start speech recognition…';
 
     recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -611,3 +607,7 @@ if (quoteToggleBtn) {
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initSpeechRecognition();
+// Auto-start browser speech recognition on page load
+if (hasSpeechSupport()) {
+    setTimeout(() => startRecording(), 500);
+}
