@@ -2,6 +2,7 @@ import os
 import json
 import re
 import sqlite3
+import threading
 import numpy as np
 from joblib import dump, load as jload
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -16,6 +17,7 @@ VERSE_INFO_FILE = os.path.join(CACHE_DIR, "verse_info.json")
 _vectorizer = None
 _tfidf_matrix = None
 _verse_info = None
+_embeddings_lock = threading.Lock()
 
 _semantic_model = None
 _favorite_verses = set()
@@ -92,16 +94,19 @@ def ensure_embeddings():
     global _vectorizer, _tfidf_matrix, _verse_info
     if _vectorizer is not None and _tfidf_matrix is not None:
         return True
-    if os.path.exists(MATRIX_FILE) and os.path.exists(VERSE_INFO_FILE):
-        try:
-            _vectorizer, _tfidf_matrix, _verse_info = _load_index()
-            print(f"  Loaded cached TF-IDF index ({_tfidf_matrix.shape[0]} verses)")
-        except Exception as e:
-            print(f"  Cache load failed: {e}, rebuilding...")
+    with _embeddings_lock:
+        if _vectorizer is not None and _tfidf_matrix is not None:
+            return True
+        if os.path.exists(MATRIX_FILE) and os.path.exists(VERSE_INFO_FILE):
+            try:
+                _vectorizer, _tfidf_matrix, _verse_info = _load_index()
+                print(f"  Loaded cached TF-IDF index ({_tfidf_matrix.shape[0]} verses)")
+            except Exception as e:
+                print(f"  Cache load failed: {e}, rebuilding...")
+                _vectorizer, _tfidf_matrix, _verse_info = _build_index()
+        else:
             _vectorizer, _tfidf_matrix, _verse_info = _build_index()
-    else:
-        _vectorizer, _tfidf_matrix, _verse_info = _build_index()
-    _get_semantic_model()
+        _get_semantic_model()
     return True
 
 
@@ -111,7 +116,7 @@ def _get_semantic_model():
         try:
             from sentence_transformers import SentenceTransformer
             print("  Loading semantic re-ranker model...")
-            _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+            _semantic_model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
         except Exception as e:
             print(f"  Semantic model unavailable (re-ranking disabled): {e}")
     return _semantic_model
