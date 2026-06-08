@@ -530,11 +530,24 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 /* Manual lookup */
+#manual-card {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    flex-shrink: 0;
+}
+
+#manual-card h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+}
+
 #manual-lookup-form {
     display: flex;
     gap: 8px;
-    padding: 14px;
-    border-bottom: 1px solid var(--border);
 }
 
 #manual-input {
@@ -554,10 +567,10 @@ input[type="number"] { width: 70px; text-align: center; }
 
 /* Lookup preview */
 #lookup-preview {
-    padding: 14px;
+    padding: 10px 0 0 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 #lookup-reference-label {
@@ -680,10 +693,6 @@ input[type="number"] { width: 70px; text-align: center; }
 #candidates-card {
     flex: 2;
     min-height: 0;
-}
-
-#manual-card {
-    flex: 0 0 auto;
 }
 
 #quote-detection-controls {
