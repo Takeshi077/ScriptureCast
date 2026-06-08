@@ -14,9 +14,13 @@ from .semantic import ensure_embeddings, search_similar_verses, might_be_quote
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load ASR model, semantic embeddings, then start transcription
-    init_model()
-    ensure_embeddings()
+    # Startup: Load ASR model and semantic embeddings in a background thread so we don't block server startup
+    import threading
+    def bg_startup():
+        init_model()
+        ensure_embeddings()
+    threading.Thread(target=bg_startup, daemon=True).start()
+
     loop = asyncio.get_running_loop()
     def handle_transcription(text):
         asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True, broadcast_to_clients=True), loop)
