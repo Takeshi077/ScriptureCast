@@ -121,6 +121,8 @@ function setConnectionStatus(status) {
     }
 }
 
+const MAX_NOTE_LENGTH = 10000;
+
 // ── Continuous Note Display ─────────────────────────────────
 function initContinuousNote() {
     const placeholder = transcriptFeed.querySelector('.placeholder-text');
@@ -139,6 +141,10 @@ function updateTranscriptDisplay() {
     let display = fullTranscript;
     if (interimText) {
         display += ' ' + interimText;
+    }
+    // Keep tail end for performance — enough for full sermon context
+    if (display.length > MAX_NOTE_LENGTH) {
+        display = '… ' + display.slice(-MAX_NOTE_LENGTH);
     }
     transcriptNote.textContent = display || 'Waiting for audio input…';
     transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
@@ -197,7 +203,11 @@ function initSpeechRecognition() {
         if (newFinal) {
             const text = newFinal.trim();
             if (text) {
-                fullTranscript += (fullTranscript ? ' ' : '') + text;
+                const sep = fullTranscript ? ' ' : '';
+                fullTranscript += sep + text;
+                if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+                    fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
+                }
                 send({ type: 'transcript', text });
             }
         }
@@ -319,6 +329,9 @@ function handleStateUpdate(state) {
     // Load full transcript from server on initial connect
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
+        if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+            fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
+        }
         updateTranscriptDisplay();
     }
 }
@@ -328,7 +341,11 @@ function handleTranscript(text, isFinal) {
     setLiveLabel(true);
 
     if (isFinal) {
-        fullTranscript += (fullTranscript ? ' ' : '') + text;
+        const sep = fullTranscript ? ' ' : '';
+        fullTranscript += sep + text;
+        if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+            fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
+        }
     } else {
         interimText = text;
     }

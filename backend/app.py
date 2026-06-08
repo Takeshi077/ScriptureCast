@@ -313,8 +313,11 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
 
     # Accumulate into full transcript (like a long note)
     if is_final:
+        MAX_NOTE_LENGTH = 10000
         if state["full_transcript"]:
             state["full_transcript"] += " " + text
+            if len(state["full_transcript"]) > MAX_NOTE_LENGTH * 2:
+                state["full_transcript"] = state["full_transcript"][-MAX_NOTE_LENGTH:]
         else:
             state["full_transcript"] = text
 
