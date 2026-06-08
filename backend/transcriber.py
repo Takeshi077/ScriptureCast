@@ -23,7 +23,7 @@ BLOCK_DURATION = 0.5          # seconds per audio block
 RMS_THRESHOLD = 0.005         # voice activity threshold (lower = more sensitive)
 SILENCE_TIMEOUT = 2.5         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
-MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large)
+MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large or .en versions)
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -36,7 +36,7 @@ def init_model():
         try:
             from faster_whisper import WhisperModel
             print(f"  Loading faster-whisper ({MODEL_SIZE}) model… (first download may take a minute)")
-            _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
+            _model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8", local_files_only=True)
             _model_ready = True
             print("  ASR model loaded successfully.")
             return True
@@ -128,7 +128,13 @@ def _finalise_utterance(buffer, callback_fn):
         return
 
     try:
-        segments, _ = _model.transcribe(audio_np, beam_size=3, language="en")
+        segments, _ = _model.transcribe(
+            audio_np,
+            beam_size=1,
+            language="en",
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500)
+        )
         text = " ".join(seg.text for seg in segments).strip()
         if text:
             print(f"  ASR: {text}")
