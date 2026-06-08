@@ -362,37 +362,28 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 /* ============================================================
-   LEFT PANEL — Transcript
+   LEFT PANEL — Transcript (Continuous Note)
    ============================================================ */
 #transcript-feed {
     flex: 1;
     overflow-y: auto;
     padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 
-.transcript-chunk {
-    padding: 10px 14px;
-    border-radius: var(--radius-sm);
-    background: var(--bg-card);
-    border-left: 3px solid var(--border);
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    transition: border-color var(--transition);
-    animation: slideIn 0.25s ease;
-}
-
-.transcript-chunk.final {
-    border-left-color: var(--accent-blue);
+.continuous-note {
+    font-size: 14px;
     color: var(--text-primary);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 4px 0;
 }
 
-.transcript-chunk.has-match {
-    border-left-color: var(--accent-violet);
-    background: rgba(129, 140, 248, 0.05);
+.continuous-note:empty::before {
+    content: 'Waiting for audio input…';
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
 }
 
 @keyframes slideIn {

@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     ensure_embeddings()
     loop = asyncio.get_running_loop()
     def handle_transcription(text):
-        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True), loop)
+        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True, broadcast_to_clients=True), loop)
 
     start_transcribing(handle_transcription)
 
@@ -39,6 +39,7 @@ state = {
     "display_duration": 15,
     "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
     "recent_transcripts": [],   # List of {"text": "...", "is_final": bool}
+    "full_transcript": "",      # Continuous accumulation of all transcript text
     "context_book": None,       # Last displayed book (for QV-07 context awareness)
     "context_chapter": None,    # Last displayed chapter
     "rolling_buffer": [],       # List of {"text": str, "timestamp": float} for last ~15s
@@ -145,6 +146,7 @@ async def broadcast_state():
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
         "recent_transcripts": state["recent_transcripts"],
+        "full_transcript": state["full_transcript"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
         "rolling_buffer_text": _get_recent_buffer_text(),
@@ -299,11 +301,18 @@ async def _quote_detection_loop():
 
 
 # Helper to process transcript text and detect verses
-async def process_transcript(text: str, is_final: bool = False):
+async def process_transcript(text: str, is_final: bool = False, broadcast_to_clients: bool = False):
     # Add to transcript history
     state["recent_transcripts"].append({"text": text, "is_final": is_final})
     if len(state["recent_transcripts"]) > 10:
         state["recent_transcripts"].pop(0)
+
+    # Accumulate into full transcript (like a long note)
+    if is_final:
+        if state["full_transcript"]:
+            state["full_transcript"] += " " + text
+        else:
+            state["full_transcript"] = text
 
     # Update rolling buffer for continuous quote detection (only final)
     if is_final:
@@ -315,6 +324,15 @@ async def process_transcript(text: str, is_final: bool = False):
             entry for entry in state["rolling_buffer"]
             if entry["timestamp"] >= cutoff
         ]
+    
+    # Broadcast transcript to WebSocket clients (for backend ASR or non-browser sources)
+    if broadcast_to_clients and is_final and active_websockets:
+        transcript_msg = json.dumps({
+            "type": "transcript",
+            "text": text,
+            "is_final": True
+        })
+        await _safe_send(transcript_msg)
     
     # Only run detection on final transcripts
     if not is_final:
@@ -366,6 +384,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
             "recent_transcripts": state["recent_transcripts"],
+            "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
             "rolling_buffer_text": _get_recent_buffer_text(),
