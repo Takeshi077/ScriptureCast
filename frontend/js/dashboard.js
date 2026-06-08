@@ -17,8 +17,6 @@ const durationInput   = document.getElementById('duration-input');
 const clearBtn        = document.getElementById('clear-btn');
 const transcriptFeed  = document.getElementById('transcript-feed');
 const micLiveLabel    = document.getElementById('mic-live-label');
-const simInput        = document.getElementById('sim-input');
-const simSendBtn      = document.getElementById('sim-send-btn');
 const candidatesList  = document.getElementById('candidates-list');
 const manualInput     = document.getElementById('manual-input');
 const manualLookupBtn = document.getElementById('manual-lookup-btn');
@@ -194,7 +192,7 @@ function initSpeechRecognition() {
                 }
                 lastInterimEl = null;
                 handleTranscript(text, true);
-                send({ type: 'simulated_speech', text });
+                send({ type: 'transcript', text });
             }
         }
     };
@@ -504,22 +502,6 @@ durationInput.addEventListener('change', () => {
 
 clearBtn.addEventListener('click', () => {
     send({ type: 'clear' });
-});
-
-// ── Simulated Speech ───────────────────────────────────────
-simSendBtn.addEventListener('click', () => {
-    const text = simInput.value.trim();
-    if (!text) return;
-
-    handleTranscript(text, true);
-    send({ type: 'simulated_speech', text });
-    simInput.value = '';
-});
-
-simInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        simSendBtn.click();
-    }
 });
 
 // ── Manual Verse Lookup ────────────────────────────────────

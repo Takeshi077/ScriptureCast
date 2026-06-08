@@ -9,7 +9,7 @@ async def test():
         print('2nd msg type:', json.loads(msg).get('type'))
 
         print('Sending simulated speech...')
-        await ws.send(json.dumps({'type': 'simulated_speech', 'text': 'For God so loved the world'}))
+        await ws.send(json.dumps({'type': 'transcript', 'text': 'For God so loved the world'}))
 
         for i in range(20):
             try:

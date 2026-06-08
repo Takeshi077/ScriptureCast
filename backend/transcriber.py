@@ -116,7 +116,7 @@ def transcription_loop(callback_fn):
 
     except Exception as e:
         print("  Could not start audio input stream (no mic detected or sound card error):", e)
-        print("  ASR unavailable — use simulated speech from the dashboard instead.")
+        print("  ASR unavailable — use the Manual Verse Lookup or browser speech recognition instead.")
         while is_listening:
             time.sleep(1.0)
 
