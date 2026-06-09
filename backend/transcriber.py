@@ -20,10 +20,10 @@ _model_lock = threading.Lock()
 SAMPLE_RATE = 16000
 CHANNELS = 1
 BLOCK_DURATION = 0.2          # seconds per audio block
-RMS_THRESHOLD = 0.003         # voice activity threshold (lower = more sensitive)
-SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance
+RMS_THRESHOLD = 0.002         # voice activity threshold (lower = more sensitive)
+SILENCE_TIMEOUT = 1.0         # seconds of silence before finalising utterance
 MAX_UTTERANCE = 30            # max seconds for a single utterance
-MODEL_SIZE = "medium"         # whisper model size (tiny/base/small/medium/large-v3)
+MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large-v3) — small is 10x faster than medium on CPU
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -139,10 +139,9 @@ def _finalise_utterance(buffer, callback_fn):
     try:
         segments, _ = _model.transcribe(
             audio_np,
-            beam_size=5,
+            beam_size=3,
             language="en",
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500)
+            condition_on_previous_text=False,
         )
         text = " ".join(seg.text for seg in segments).strip()
         if text:
