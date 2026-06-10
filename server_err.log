@@ -1,2 +1,18 @@
 INFO:     Started server process [5820]
 INFO:     Waiting for application startup.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 1580.75it/s]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:61199 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61202 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:61284 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61362 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:61379 - "WebSocket /ws" [accepted]
+INFO:     connection open
