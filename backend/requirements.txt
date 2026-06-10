@@ -5,3 +5,4 @@ sounddevice
 numpy
 faster-whisper
 sentence-transformers
+python-multipart
