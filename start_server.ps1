@@ -31,7 +31,11 @@ if (-not $NoBrowser) {
     Start-Process "http://localhost:$port"
 }
 
-python run.py
+if (Test-Path ".venv\Scripts\python.exe") {
+    & .venv\Scripts\python.exe run.py
+} else {
+    python run.py
+}
 
 # If server exits, wait for key press
 Write-Host "`nServer stopped. Press any key to exit..." -ForegroundColor Yellow
