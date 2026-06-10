@@ -141,14 +141,17 @@ function updateTranscriptDisplay() {
     transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
-// ── Browser Speech Recognition ──────────────────────────────
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
+// ── AssemblyAI Streaming STT ──────────────────────────────
 let isRecording = false;
-let recognitionRestart = false;
+let audioContext = null;
+let scriptProcessor = null;
+let source = null;
+let mediaStream = null;
+let aaiWs = null;
 
 function hasSpeechSupport() {
-    return !!SpeechRecognition;
+    return !!(window.AudioContext || window.webkitAudioContext) && 
+           !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 function setLiveLabel(show) {
@@ -159,87 +162,195 @@ function showTextFallback() {
     textInputArea.classList.remove('hidden');
 }
 
+function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+    if (inputSampleRate === outputSampleRate) {
+        return buffer;
+    }
+    const sampleRateRatio = inputSampleRate / outputSampleRate;
+    const newLength = Math.round(buffer.length / sampleSampleRateRatio());
+    // Wait, let's use standard downsampling logic
+    const ratio = inputSampleRate / outputSampleRate;
+    const result = new Float32Array(Math.round(buffer.length / ratio));
+    let writeOffset = 0;
+    let readOffset = 0;
+    while (writeOffset < result.length) {
+        const nextReadOffset = Math.round((writeOffset + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = readOffset; i < nextReadOffset && i < buffer.length; i++) {
+            accum += buffer[i];
+            count++;
+        }
+        result[writeOffset] = count > 0 ? accum / count : 0;
+        writeOffset++;
+        readOffset = nextReadOffset;
+    }
+    return result;
+}
+
+function float32ToInt16(buffer) {
+    const l = buffer.length;
+    const buf = new Int16Array(l);
+    for (let i = 0; i < l; i++) {
+        const s = Math.max(-1, Math.min(1, buffer[i]));
+        buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return buf.buffer;
+}
+
 function initSpeechRecognition() {
     if (!hasSpeechSupport()) {
         setLiveLabel(false);
         micToggleBtn.disabled = true;
-        micToggleBtn.title = 'Speech recognition not supported in this browser';
+        micToggleBtn.title = 'Speech recording not supported in this browser';
         const placeholder = transcriptFeed.querySelector('.placeholder-text');
-        if (placeholder) placeholder.textContent = 'Speech recognition is not available in this browser. Type text below instead.';
+        if (placeholder) placeholder.textContent = 'Audio input is not supported in this browser. Type text below instead.';
         showTextFallback();
         return;
     }
-
     initContinuousNote();
+}
 
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-        let newInterim = '';
-        let newFinal = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-                newFinal += result[0].transcript;
-            } else {
-                newInterim += result[0].transcript;
-            }
+async function startRecording() {
+    if (isRecording) return;
+    
+    micToggleBtn.classList.add('connecting');
+    micToggleBtn.title = 'Connecting to AssemblyAI...';
+    
+    try {
+        // 1. Get temporary token from backend
+        const tokenResp = await fetch('/api/token');
+        if (!tokenResp.ok) {
+            throw new Error(`Failed to retrieve token: ${tokenResp.statusText}`);
         }
+        const tokenData = await tokenResp.json();
+        const token = tokenData.token;
 
-        if (newFinal) {
-            const text = newFinal.trim();
-            if (text) {
-                send({ type: 'transcript', text });
+        // 2. Access microphone
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                channelCount: 1
             }
-        }
+        });
 
-        interimText = newInterim.trim();
+        // 3. Connect to AssemblyAI Streaming WebSocket directly
+        const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&speech_model=u3-rt-pro&token=${token}`;
+        aaiWs = new WebSocket(wsUrl);
 
-        if (interimText) {
-            micToggleBtn.classList.add('speaking');
+        aaiWs.onopen = () => {
+            micToggleBtn.classList.remove('connecting');
+            micToggleBtn.classList.add('active');
+            micToggleBtn.title = 'Click to stop live transcription';
             setLiveLabel(true);
-            updateTranscriptDisplay();
-        } else {
-            micToggleBtn.classList.remove('speaking');
-        }
-    };
+            isRecording = true;
 
-    recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-            setLiveLabel(false);
-            micToggleBtn.classList.remove('active', 'speaking');
-            isRecording = false;
-            showTextFallback();
-        } else if (event.error === 'no-speech') {
-            // Ignore — will restart automatically
-        } else {
+            // Start audio pipeline
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            source = audioContext.createMediaStreamSource(mediaStream);
+            scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+            scriptProcessor.onaudioprocess = (e) => {
+                if (!isRecording) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+                const pcm16 = float32ToInt16(downsampled);
+                if (aaiWs && aaiWs.readyState === WebSocket.OPEN) {
+                    aaiWs.send(pcm16);
+                }
+            };
+
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(audioContext.destination);
+        };
+
+        aaiWs.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'Turn') {
+                const text = msg.transcript;
+                const isFinal = msg.end_of_turn;
+                
+                if (isFinal) {
+                    interimText = '';
+                    if (text.trim()) {
+                        send({ type: 'transcript', text: text.trim() });
+                    }
+                } else {
+                    interimText = text;
+                    updateTranscriptDisplay();
+                    if (interimText) {
+                        micToggleBtn.classList.add('speaking');
+                    } else {
+                        micToggleBtn.classList.remove('speaking');
+                    }
+                }
+            }
+        };
+
+        aaiWs.onerror = (err) => {
+            console.error('AssemblyAI WebSocket error:', err);
             stopRecording();
-        }
-    };
+        };
 
-    recognition.onend = () => {
-        micToggleBtn.classList.remove('active', 'speaking');
-        if (isRecording || recognitionRestart) {
-            recognitionRestart = false;
-            try { recognition.start(); } catch {}
-        } else {
-            setLiveLabel(false);
+        aaiWs.onclose = (event) => {
+            console.log('AssemblyAI WebSocket closed:', event.code, event.reason);
+            if (isRecording) {
+                stopRecording();
+            }
+        };
+
+    } catch (err) {
+        console.error('Failed to start live transcription:', err);
+        alert(`Error starting microphone: ${err.message}`);
+        micToggleBtn.classList.remove('connecting', 'active');
+        isRecording = false;
+        setLiveLabel(false);
+        showTextFallback();
+    }
+}
+
+function stopRecording() {
+    if (!isRecording) return;
+    
+    isRecording = false;
+    micToggleBtn.classList.remove('active', 'speaking', 'connecting');
+    micToggleBtn.title = 'Click to start live transcription';
+    setLiveLabel(false);
+    interimText = '';
+    updateTranscriptDisplay();
+
+    // Clean up audio context & streams
+    if (scriptProcessor) {
+        scriptProcessor.onaudioprocess = null;
+        try { scriptProcessor.disconnect(); } catch {}
+        scriptProcessor = null;
+    }
+    if (source) {
+        try { source.disconnect(); } catch {}
+        source = null;
+    }
+    if (mediaStream) {
+        try {
+            mediaStream.getTracks().forEach(track => track.stop());
+        } catch {}
+        mediaStream = null;
+    }
+    if (audioContext) {
+        try { audioContext.close(); } catch {}
+        audioContext = null;
+    }
+
+    // Terminate session gracefully
+    if (aaiWs) {
+        if (aaiWs.readyState === WebSocket.OPEN) {
+            aaiWs.send(JSON.stringify({ type: 'Terminate' }));
+            aaiWs.close();
         }
-    };
+        aaiWs = null;
+    }
 }
 
 function toggleRecording() {
-    if (!recognition) {
-        initSpeechRecognition();
-        if (!recognition) return;
-    }
-
     if (isRecording) {
         stopRecording();
     } else {
@@ -247,36 +358,8 @@ function toggleRecording() {
     }
 }
 
-function startRecording() {
-    if (isRecording || !recognition) return;
-    try {
-        recognition.start();
-        isRecording = true;
-        micToggleBtn.classList.add('active');
-        setLiveLabel(true);
-    } catch (e) {
-        console.warn('Failed to start speech recognition:', e);
-    }
-}
-
-function stopRecording() {
-    isRecording = false;
-    micToggleBtn.classList.remove('active', 'speaking');
-    setLiveLabel(false);
-    if (recognition) {
-        try { recognition.stop(); } catch {}
-    }
-}
-
 micToggleBtn.addEventListener('click', toggleRecording);
 
-// Re-init on reconnect to ensure fresh state
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && isRecording) {
-        recognitionRestart = true;
-        try { recognition.abort(); } catch {}
-    }
-});
 
 // ── State Update Handler ───────────────────────────────────
 function handleStateUpdate(state) {
@@ -553,5 +636,5 @@ connect();
 initContinuousNote();
 initSpeechRecognition();
 if (hasSpeechSupport()) {
-    micToggleBtn.title = 'Optional: click to use browser speech recognition as a backup';
+    micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
 }

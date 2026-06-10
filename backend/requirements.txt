@@ -6,3 +6,5 @@ numpy
 faster-whisper
 sentence-transformers
 python-multipart
+assemblyai
+requests

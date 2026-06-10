@@ -13,23 +13,16 @@ from .transcriber import (
     init_model, start_transcribing, stop_transcribing, _model_available,
 )
 
+import assemblyai as aai
+import requests
+
+# Configure AssemblyAI API key
+aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load ASR model in a background thread so we don't block server startup
-    import threading
-    def bg_startup():
-        init_model()
-    threading.Thread(target=bg_startup, daemon=True).start()
-
-    loop = asyncio.get_running_loop()
-    def handle_transcription(text):
-        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True), loop)
-
-    start_transcribing(handle_transcription)
-
+    # AssemblyAI integration uses browser streaming. Local faster-whisper ASR is disabled.
     yield
-    # Shutdown: Stop transcription
-    stop_transcribing()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -318,16 +311,25 @@ async def api_verse_preview(book: str, chapter: int, verse: int = None):
     scripture = get_scripture(state["current_translation"], book, chapter, verse)
     return scripture
 
+@app.get("/api/token")
+async def get_assemblyai_token():
+    try:
+        api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+        response = requests.get(
+            "https://streaming.assemblyai.com/v3/token?expires_in_seconds=60",
+            headers={"Authorization": api_key}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=f"Failed to fetch token from AssemblyAI: {response.text}")
+        return response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/transcribe")
 async def api_transcribe(file: UploadFile = File(...)):
-    """Transcribe an audio file using the loaded Whisper model."""
-    if not _model_available():
-        raise HTTPException(status_code=503, detail="ASR model not loaded yet")
-
+    """Transcribe an audio file using AssemblyAI API."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
-
-    from .transcriber import _model
 
     suffix = os.path.splitext(file.filename or ".wav")[1] or ".wav"
     tmp = None
@@ -337,14 +339,16 @@ async def api_transcribe(file: UploadFile = File(...)):
             content = await file.read()
             f.write(content)
 
-        segments, _ = _model.transcribe(
-            tmp,
-            beam_size=3,
-            language="en",
-            condition_on_previous_text=False,
+        transcriber = aai.Transcriber()
+        config = aai.TranscriptionConfig(
+            speech_models=["universal-3-pro", "universal-2"]
         )
-        text = " ".join(seg.text for seg in segments).strip()
-        return {"text": text, "language": "en"}
+        transcript = transcriber.transcribe(tmp, config=config)
+        
+        if transcript.status == aai.TranscriptStatus.error:
+            raise Exception(transcript.error)
+            
+        return {"text": transcript.text, "language": "en"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
