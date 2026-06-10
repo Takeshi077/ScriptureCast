@@ -196,8 +196,10 @@ async def process_transcript(text: str, is_final: bool = False):
     candidates = parse_text_for_verses(text)
 
     # Semantic search for implied quotes (always runs alongside regex)
-    top_k = 3 if candidates else 5
-    semantic_candidates = search_similar_verses(
+    semantic_candidates = []
+    if HAS_SEMANTIC:
+        top_k = 3 if candidates else 5
+        semantic_candidates = search_similar_verses(
         text,
         translation=state["current_translation"],
         context_book=state.get("context_book"),
