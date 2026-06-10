@@ -723,15 +723,7 @@ input[type="number"] { width: 70px; text-align: center; }
     opacity: 0.6;
 }
 
-#idle-preview {
-    display: block;
-    max-width: 100%;
-    max-height: 120px;
-    margin-top: 0.5rem;
-    border-radius: 6px;
-    object-fit: contain;
-    background: var(--surface);
-}
+
 
 /* Status badge for idle */
 .status-badge.status-idle {
