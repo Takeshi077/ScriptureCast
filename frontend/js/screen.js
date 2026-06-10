@@ -4,8 +4,6 @@ const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 const container = document.getElementById('display-container');
 const referenceEl = document.getElementById('reference');
 const textEl = document.getElementById('scripture-text');
-const idleContainer = document.getElementById('idle-container');
-const idleImage = document.getElementById('idle-image');
 
 let socket = null;
 let displayTimeout = null;
@@ -47,35 +45,6 @@ function connect() {
     };
 }
 
-function showIdle(activeScripture) {
-    container.classList.remove('visible');
-    container.classList.add('hidden');
-
-    if (activeScripture.mode === 'image') {
-        const dataUrl = localStorage.getItem('scripturecast_idle_image');
-        if (dataUrl) {
-            idleImage.src = dataUrl;
-            idleContainer.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                idleContainer.classList.add('visible');
-            });
-        } else {
-            idleContainer.classList.remove('visible');
-            idleContainer.classList.add('hidden');
-        }
-    } else {
-        idleContainer.classList.remove('visible');
-        idleContainer.classList.add('hidden');
-    }
-}
-
-function hideAll() {
-    container.classList.remove('visible');
-    container.classList.add('hidden');
-    idleContainer.classList.remove('visible');
-    idleContainer.classList.add('hidden');
-}
-
 function updateDisplay(activeScripture, durationSeconds) {
     if (displayTimeout) {
         clearTimeout(displayTimeout);
@@ -83,37 +52,24 @@ function updateDisplay(activeScripture, durationSeconds) {
     }
 
     if (!activeScripture) {
-        hideAll();
+        container.classList.remove('visible');
+        container.classList.add('hidden');
         return;
     }
 
-    // Idle content (between verses)
-    if (activeScripture._idle) {
-        showIdle(activeScripture);
-        return;
-    }
+    referenceEl.textContent = activeScripture.reference || '';
+    textEl.textContent = `"${activeScripture.text}"`;
+    textEl.scrollTop = 0;
 
-    // Normal scripture display
-    idleContainer.classList.remove('visible');
-    idleContainer.classList.add('hidden');
+    container.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        container.classList.add('visible');
+    });
 
-    if (activeScripture.text) {
-        referenceEl.textContent = activeScripture.reference || '';
-        textEl.textContent = `"${activeScripture.text}"`;
-        textEl.scrollTop = 0;
-
-        container.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            container.classList.add('visible');
-        });
-
-        if (durationSeconds && durationSeconds > 0) {
-            displayTimeout = setTimeout(() => {
-                hideDisplay();
-            }, durationSeconds * 1000);
-        }
-    } else {
-        hideDisplay();
+    if (durationSeconds && durationSeconds > 0) {
+        displayTimeout = setTimeout(() => {
+            hideDisplay();
+        }, durationSeconds * 1000);
     }
 }
 

@@ -676,38 +676,6 @@ input[type="number"] { width: 70px; text-align: center; }
     font-style: italic;
 }
 
-/* Idle content settings */
-#idle-settings {
-    padding: 0 1rem 0.5rem;
-}
-
-#idle-body {
-    padding: 0.5rem 0;
-}
-
-.idle-mode-row {
-    margin-bottom: 0.5rem;
-}
-
-#idle-mode-select {
-    width: 100%;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.85rem;
-}
-
-
-
-/* Status badge for idle */
-.status-badge.status-idle {
-    background: #f59e0b20;
-    color: #f59e0b;
-    border: 1px solid #f59e0b40;
-}
-
 /* Countdown bar */
 #countdown-wrap {
     padding: 0 14px 12px;
