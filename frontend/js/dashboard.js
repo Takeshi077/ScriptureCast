@@ -386,11 +386,6 @@ function handleStateUpdate(state) {
         updateTranscriptDisplay();
     }
 
-    // Sync theme
-    if (state.theme) {
-        currentTheme = state.theme;
-        syncThemeUI(state.theme);
-    }
 }
 
 // ── Transcript Handler ─────────────────────────────────────
@@ -633,57 +628,6 @@ function escHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
-
-// ── Theme UI ──────────────────────────────────────────────
-function syncThemeUI(theme) {
-    document.querySelectorAll('.swatch[data-key="background"]').forEach(el => {
-        el.classList.toggle('active', el.dataset.value === theme.background);
-    });
-    document.querySelectorAll('.swatch[data-key="accent_color"]').forEach(el => {
-        el.classList.toggle('active', el.dataset.value === theme.accent_color);
-    });
-    document.querySelectorAll('.swatch[data-key="font_size"]').forEach(el => {
-        el.classList.toggle('active', el.dataset.value === theme.font_size);
-    });
-    // Update preview backdrop
-    const preview = document.getElementById('projector-preview-screen');
-    if (preview) {
-        preview.style.backgroundColor = theme.background;
-    }
-}
-
-function sendTheme(updates) {
-    send({ type: 'set_theme', theme: updates });
-}
-
-document.addEventListener('click', (e) => {
-    const swatch = e.target.closest('.swatch');
-    if (!swatch) return;
-
-    const key = swatch.dataset.key;
-    let value = swatch.dataset.value;
-
-    if (value === 'custom') {
-        const picker = swatch.parentElement.querySelector('.color-picker');
-        if (picker) {
-            picker.click();
-        }
-        return;
-    }
-
-    swatch.closest('.theme-swatches').querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-    swatch.classList.add('active');
-    sendTheme({ [key]: value });
-});
-
-document.querySelectorAll('.color-picker').forEach(picker => {
-    picker.addEventListener('input', () => {
-        const swatches = picker.closest('.theme-swatches').querySelectorAll('.swatch');
-        swatches.forEach(s => s.classList.remove('active'));
-        const key = picker.id === 'bg-color-picker' ? 'background' : 'accent_color';
-        sendTheme({ [key]: picker.value });
-    });
-});
 
 // ── Boot ───────────────────────────────────────────────────
 connect();
