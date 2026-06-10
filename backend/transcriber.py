@@ -20,8 +20,8 @@ _model_lock = threading.Lock()
 SAMPLE_RATE = 16000
 CHANNELS = 1
 BLOCK_DURATION = 0.2          # seconds per audio block
-RMS_THRESHOLD = 0.002         # voice activity threshold (lower = more sensitive)
-SILENCE_TIMEOUT = 1.0         # seconds of silence before finalising utterance
+RMS_THRESHOLD = 0.008         # voice activity threshold (higher = less sensitive to noise/echo)
+SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance (longer = less fragmenting)
 MAX_UTTERANCE = 30            # max seconds for a single utterance
 MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large-v3) — small is 10x faster than medium on CPU
 
@@ -127,7 +127,12 @@ def _normalise_audio(audio_np):
         return audio_np / peak
     return audio_np
 
+# Track last transcribed text to suppress echo repeats
+_last_transcribed_text = ""
+_last_transcribed_time = 0
+
 def _finalise_utterance(buffer, callback_fn):
+    global _last_transcribed_text, _last_transcribed_time
     if not buffer or not _model_ready:
         return
     audio_np = np.concatenate(buffer, axis=0).flatten()
@@ -145,6 +150,12 @@ def _finalise_utterance(buffer, callback_fn):
         )
         text = " ".join(seg.text for seg in segments).strip()
         if text:
+            # Suppress echo: skip if same text within last 5 seconds
+            now = time.time()
+            if text == _last_transcribed_text and now - _last_transcribed_time < 5.0:
+                return
+            _last_transcribed_text = text
+            _last_transcribed_time = now
             print(f"  ASR: {text}")
             callback_fn(text)
     except Exception as e:
