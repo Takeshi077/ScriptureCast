@@ -699,15 +699,38 @@ input[type="number"] { width: 70px; text-align: center; }
     font-size: 0.85rem;
 }
 
-#idle-image-input {
-    width: 100%;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--border);
+#idle-upload-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px dashed var(--border);
     border-radius: 6px;
     background: var(--surface);
-    color: var(--text);
+    color: var(--text-muted);
     font-size: 0.85rem;
-    box-sizing: border-box;
+    cursor: pointer;
+    transition: background 0.2s;
+    justify-content: center;
+}
+
+#idle-upload-label:hover {
+    background: var(--hover);
+}
+
+#idle-upload-label.uploading {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+#idle-preview {
+    display: block;
+    max-width: 100%;
+    max-height: 120px;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+    object-fit: contain;
+    background: var(--surface);
 }
 
 /* Status badge for idle */
