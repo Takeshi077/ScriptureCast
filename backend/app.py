@@ -494,6 +494,39 @@ async def api_verse_preview(book: str, chapter: int, verse: int = None):
     scripture = get_scripture(state["current_translation"], book, chapter, verse)
     return scripture
 
+@app.post("/api/transcribe")
+async def api_transcribe(file: UploadFile = File(...)):
+    """Transcribe an audio file using the loaded Whisper model."""
+    if not _model_available():
+        raise HTTPException(status_code=503, detail="ASR model not loaded yet")
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    from .transcriber import _model
+
+    suffix = os.path.splitext(file.filename or ".wav")[1] or ".wav"
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+            tmp = f.name
+            content = await file.read()
+            f.write(content)
+
+        segments, _ = _model.transcribe(
+            tmp,
+            beam_size=3,
+            language="en",
+            condition_on_previous_text=False,
+        )
+        text = " ".join(seg.text for seg in segments).strip()
+        return {"text": text, "language": "en"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.unlink(tmp)
+
 # Mount frontend files (css, js, images) at /frontend
 if os.path.exists(FRONTEND_DIR):
     app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
