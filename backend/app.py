@@ -214,7 +214,7 @@ def _extract_phrases(text):
             if key not in seen:
                 seen.add(key)
                 phrases.append(phrase)
-    return phrases[:30]  # Cap at 30 phrases per cycle
+    return phrases[:10]  # Cap at 10 phrases per cycle
 
 
 def _get_recent_buffer_text():
@@ -340,6 +340,7 @@ async def _quote_detection_loop():
 
 
 _executor = None
+_process_executor = None
 
 def _get_executor():
     global _executor
@@ -347,6 +348,14 @@ def _get_executor():
         import concurrent.futures
         _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
     return _executor
+
+def _get_process_executor():
+    """Dedicated 1-worker executor for process_transcript — never blocked by quote detection."""
+    global _process_executor
+    if _process_executor is None:
+        import concurrent.futures
+        _process_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="process")
+    return _process_executor
 
 
 # Helper to process transcript text and detect verses
@@ -398,7 +407,7 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
     if not regex_candidates or might_be_quote(text):
         try:
             loop = asyncio.get_running_loop()
-            executor = _get_executor()
+            executor = _get_process_executor()
             semantic_candidates = await asyncio.wait_for(
                 loop.run_in_executor(
                     executor,
