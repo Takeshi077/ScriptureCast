@@ -152,7 +152,6 @@ async def broadcast_state():
         "current_translation": state["current_translation"],
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
-        "recent_transcripts": state["recent_transcripts"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
         "rolling_buffer_text": _get_recent_buffer_text(),
@@ -259,10 +258,12 @@ async def _quote_detection_loop():
             if not phrases:
                 await broadcast_state()
                 continue
+
+            # Run all phrase searches concurrently
+            tasks = []
             for phrase in phrases:
-                await asyncio.sleep(0)
-                try:
-                    candidates = await asyncio.wait_for(
+                tasks.append(
+                    asyncio.wait_for(
                         loop.run_in_executor(
                             executor,
                             functools.partial(
@@ -276,16 +277,26 @@ async def _quote_detection_loop():
                         ),
                         timeout=15.0,
                     )
-                except Exception:
+                )
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Collect all new quotes from this cycle
+            new_quotes = []
+            best_candidate = None
+            best_confidence = 0
+            for phrase_idx, result in enumerate(results):
+                if isinstance(result, Exception):
                     continue
-                for c in candidates:
+                for c in result:
                     if c["confidence"] >= QUOTE_CONFIDENCE_THRESHOLD:
                         ref_key = f"{c['book']}|{c['chapter']}|{c['verse_start']}"
                         if _is_recently_detected(ref_key):
                             continue
-                        await _display_candidate(c)
+                        if c["confidence"] > best_confidence:
+                            best_candidate = c
+                            best_confidence = c["confidence"]
                         quote_entry = {
-                            "phrase": phrase,
+                            "phrase": phrases[phrase_idx],
                             "reference": f"{c['book']} {c['chapter']}:{c['verse_start']}",
                             "confidence": c["confidence"],
                             "book": c["book"],
@@ -296,17 +307,24 @@ async def _quote_detection_loop():
                             "type": "semantic",
                             "timestamp": time.time()
                         }
+                        new_quotes.append(quote_entry)
                         state["detected_quotes"].insert(0, quote_entry)
                         if len(state["detected_quotes"]) > 15:
                             state["detected_quotes"].pop()
-                        quote_msg = json.dumps({
-                            "type": "quote_detected",
-                            "quote": quote_entry
-                        })
-                        if active_websockets:
-                            await _safe_send(quote_msg)
 
-            # Broadcast state at most once per cycle, but only if data changed
+            # Display only the best match once per cycle
+            if best_candidate:
+                await _display_candidate(best_candidate)
+
+            # Send quote_detected messages and broadcast state
+            if new_quotes and active_websockets:
+                for q in new_quotes:
+                    await _safe_send(json.dumps({
+                        "type": "quote_detected",
+                        "quote": q
+                    }))
+
+            # One state broadcast per cycle
             now = time.time()
             if now - _last_broadcast_time >= QUOTE_DETECTION_INTERVAL:
                 await broadcast_state()
@@ -428,7 +446,6 @@ async def websocket_endpoint(websocket: WebSocket):
             "current_translation": state["current_translation"],
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
-            "recent_transcripts": state["recent_transcripts"],
             "full_transcript": "",
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
