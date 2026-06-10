@@ -200,12 +200,12 @@ async def process_transcript(text: str, is_final: bool = False):
     if HAS_SEMANTIC:
         top_k = 3 if candidates else 5
         semantic_candidates = search_similar_verses(
-        text,
-        translation=state["current_translation"],
-        context_book=state.get("context_book"),
-        context_chapter=state.get("context_chapter"),
-        top_k=top_k
-    )
+            text,
+            translation=state["current_translation"],
+            context_book=state.get("context_book"),
+            context_chapter=state.get("context_chapter"),
+            top_k=top_k
+        )
     seen = {f"{c['book']}{c.get('chapter')}{c.get('verse_start')}" for c in candidates}
     for sc in semantic_candidates:
         key = f"{sc['book']}{sc.get('chapter')}{sc.get('verse_start')}"
