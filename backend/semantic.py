@@ -4,6 +4,12 @@ import re
 import sqlite3
 import threading
 
+try:
+    import numpy as np
+    _HAS_DEPS = True
+except ImportError:
+    _HAS_DEPS = False
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
 CACHE_DIR = os.path.join(BASE_DIR, "data", "embeddings")
@@ -91,6 +97,9 @@ def _load_index():
 
 
 def ensure_embeddings():
+    if not _HAS_DEPS:
+        print("  Semantic search disabled (numpy/scikit-learn not available)")
+        return False
     global _vectorizer, _tfidf_matrix, _verse_info
     if _vectorizer is not None and _tfidf_matrix is not None:
         return True
@@ -158,6 +167,8 @@ def might_be_quote(text):
 
 
 def search_similar_verses(query_text, translation=None, context_book=None, context_chapter=None, top_k=5):
+    if not _HAS_DEPS:
+        return []
     import numpy as np
     global _vectorizer, _tfidf_matrix, _verse_info
     if _vectorizer is None or _tfidf_matrix is None:
