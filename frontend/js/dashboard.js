@@ -270,6 +270,7 @@ async function startRecording() {
                 
                 if (isFinal) {
                     interimText = '';
+                    updateTranscriptDisplay();
                     if (text.trim()) {
                         send({ type: 'transcript', text: text.trim() });
                     }
@@ -392,6 +393,7 @@ function handleTranscript(text, isFinal) {
         updateTranscriptDisplay();
         return;
     }
+    interimText = '';
     const sep = fullTranscript ? ' ' : '';
     fullTranscript += sep + text;
     if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
