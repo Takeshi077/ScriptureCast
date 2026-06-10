@@ -215,6 +215,12 @@ async function startRecording() {
     micToggleBtn.classList.add('connecting');
     micToggleBtn.title = 'Connecting to AssemblyAI...';
     
+    // Create AudioContext IMMEDIATELY — before any await, to retain user gesture
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+    }
+    
     try {
         // 1. Get temporary token from backend
         const tokenResp = await fetch('/api/token');
@@ -233,11 +239,7 @@ async function startRecording() {
             }
         });
 
-        // 3. Create audio pipeline BEFORE opening WebSocket (needs user gesture context)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
+        // 3. Create audio pipeline
         source = audioContext.createMediaStreamSource(mediaStream);
         scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
