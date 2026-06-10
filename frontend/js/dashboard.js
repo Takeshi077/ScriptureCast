@@ -31,8 +31,8 @@ const countdownTimer  = document.getElementById('countdown-timer');
 const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
 const idleModeSelect    = document.getElementById('idle-mode-select');
+const idleUploadBtn     = document.getElementById('idle-upload-btn');
 const idleFileInput     = document.getElementById('idle-file-input');
-const idleUploadLabel   = document.getElementById('idle-upload-label');
 const idleRemoveBtn     = document.getElementById('idle-remove-btn');
 const idleImageRow      = document.getElementById('idle-image-row');
 
@@ -633,29 +633,18 @@ idleModeSelect.addEventListener('change', () => {
     send({ type: 'set_idle_content', idle_content: { mode: idleModeSelect.value } });
 });
 
-idleFileInput.addEventListener('change', async () => {
+idleUploadBtn.addEventListener('click', () => idleFileInput.click());
+
+idleFileInput.addEventListener('change', () => {
     const file = idleFileInput.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    idleUploadLabel.classList.add('uploading');
-    idleUploadLabel.textContent = 'Uploading…';
-
-    try {
-        const resp = await fetch('/api/upload-image', { method: 'POST', body: formData });
-        if (!resp.ok) throw new Error('Upload failed');
-        const data = await resp.json();
-
-        send({ type: 'set_idle_content', idle_content: { image_url: data.url } });
-        idleUploadLabel.textContent = 'Upload Image';
-    } catch (err) {
-        idleUploadLabel.textContent = 'Upload Image';
-    } finally {
-        idleUploadLabel.classList.remove('uploading');
-        idleFileInput.value = '';
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        send({ type: 'set_idle_content', idle_content: { image_url: e.target.result } });
+    };
+    reader.readAsDataURL(file);
+    idleFileInput.value = '';
 });
 
 idleRemoveBtn.addEventListener('click', () => {
