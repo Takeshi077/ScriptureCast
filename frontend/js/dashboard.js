@@ -641,14 +641,16 @@ idleFileInput.addEventListener('change', () => {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        send({ type: 'set_idle_content', idle_content: { image_url: e.target.result } });
+        localStorage.setItem('scripturecast_idle_image', e.target.result);
+        send({ type: 'set_idle_content', idle_content: { mode: 'image' } });
     };
     reader.readAsDataURL(file);
     idleFileInput.value = '';
 });
 
 idleRemoveBtn.addEventListener('click', () => {
-    send({ type: 'set_idle_content', idle_content: { mode: 'blank', image_url: '' } });
+    localStorage.removeItem('scripturecast_idle_image');
+    send({ type: 'set_idle_content', idle_content: { mode: 'blank' } });
 });
 
 // ── Manual Verse Lookup ────────────────────────────────────
