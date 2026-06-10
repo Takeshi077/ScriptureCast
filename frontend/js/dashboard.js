@@ -116,6 +116,7 @@ const MAX_NOTE_LENGTH = 10000;
 
 // ── Continuous Note Display ─────────────────────────────────
 function initContinuousNote() {
+    if (transcriptNote) return;
     const placeholder = transcriptFeed.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
 
@@ -584,11 +585,7 @@ textSendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     if (!text) return;
 
-    const sep = fullTranscript ? ' ' : '';
-    fullTranscript += sep + text;
-    if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
-        fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
-    }
+    interimText = text;
     updateTranscriptDisplay();
 
     send({ type: 'transcript', text });
