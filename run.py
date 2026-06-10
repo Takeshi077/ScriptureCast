@@ -20,7 +20,7 @@ def free_port(host, port):
     try:
         if sys.platform == "win32":
             result = subprocess.run(
-                f'netstat -ano | findstr "LISTEN" | findstr ":{port} "',
+                f'netstat -ano | findstr "LISTENING" | findstr ":{port}"',
                 shell=True, capture_output=True, text=True, timeout=5
             )
             for line in result.stdout.strip().splitlines():
@@ -54,7 +54,9 @@ def wait_for_port_free(host, port, timeout=5):
 
 if __name__ == "__main__":
     free_port(HOST, PORT)
-    wait_for_port_free(HOST, PORT)
+    if not wait_for_port_free(HOST, PORT):
+        print(f"ERROR: Port {PORT} is still in use after cleanup. Cannot start server.")
+        sys.exit(1)
 
     print("=" * 52)
     print("  ScriptureCast Server Starting")

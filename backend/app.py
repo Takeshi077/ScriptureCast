@@ -110,8 +110,6 @@ async def _safe_send(message_str):
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
-        except BaseException:
-            dead.add(ws)
     if dead:
         active_websockets.difference_update(dead)
 
@@ -215,11 +213,11 @@ async def websocket_endpoint(websocket: WebSocket):
             "current_translation": state["current_translation"],
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
-            "full_transcript": "",
+            "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
         }))
-    except BaseException:
+    except Exception:
         active_websockets.discard(websocket)
         return
     
@@ -244,7 +242,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 await broadcast_state()
                 
             elif msg_type == "manual_verse":
-                # Manual trigger by entering a reference like "John 3:16"
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
                 if candidates:
@@ -263,7 +260,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "reference": scripture["reference"],
                                 "text": scripture["combined_text"]
                             }))
-                        except BaseException:
+                        except Exception:
                             pass
                         
             elif msg_type == "manual_override":
@@ -280,8 +277,6 @@ async def websocket_endpoint(websocket: WebSocket):
         active_websockets.discard(websocket)
     except Exception as e:
         print("WebSocket error:", e)
-        active_websockets.discard(websocket)
-    except BaseException:
         active_websockets.discard(websocket)
 
 # HTML endpoints to serve frontend files directly for easy local opening
