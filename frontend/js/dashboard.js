@@ -269,10 +269,11 @@ async function startRecording() {
 
         aaiWs.onmessage = (event) => {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'Turn') {
-                const text = msg.transcript;
+
+            if (msg.message_type === 'FinalTranscript') {
+                const text = msg.transcript || '';
                 const isFinal = msg.end_of_turn;
-                
+
                 if (isFinal) {
                     interimText = '';
                     updateTranscriptDisplay();
@@ -282,13 +283,16 @@ async function startRecording() {
                 } else {
                     interimText = text;
                     updateTranscriptDisplay();
-                    if (interimText) {
-                        micToggleBtn.classList.add('speaking');
-                    } else {
-                        micToggleBtn.classList.remove('speaking');
-                    }
                 }
-            } else if (msg.type === 'SessionTerminated' || msg.type === 'Termination') {
+            } else if (msg.message_type === 'PartialTranscript') {
+                interimText = msg.transcript || '';
+                updateTranscriptDisplay();
+                if (interimText) {
+                    micToggleBtn.classList.add('speaking');
+                } else {
+                    micToggleBtn.classList.remove('speaking');
+                }
+            } else if (msg.message_type === 'SessionTerminated') {
                 console.warn('AssemblyAI session terminated:', msg.reason || msg.error);
             } else if (msg.error) {
                 console.error('AssemblyAI error:', msg.error);
