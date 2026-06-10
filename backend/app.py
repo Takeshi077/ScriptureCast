@@ -1,15 +1,18 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import asyncio
 import json
 import os
 import time
+import tempfile
 import functools
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
-from .transcriber import init_model, start_transcribing, stop_transcribing
+from .transcriber import (
+    init_model, start_transcribing, stop_transcribing, _model_available,
+)
 from .semantic import ensure_embeddings, search_similar_verses, might_be_quote
 
 @asynccontextmanager
