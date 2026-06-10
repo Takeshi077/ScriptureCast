@@ -9,6 +9,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
+from .semantic import ensure_embeddings, search_similar_verses
 
 import assemblyai as aai
 import requests
@@ -18,7 +19,7 @@ aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4e
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # AssemblyAI integration uses browser streaming. Local faster-whisper ASR is disabled.
+    ensure_embeddings()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -30,7 +31,7 @@ state = {
     "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
     "recent_transcripts": [],   # List of {"text": "...", "is_final": bool}
     "full_transcript": "",      # Continuous accumulation of all transcript text
-    "context_book": None,       # Last displayed book (for QV-07 context awareness)
+    "context_book": None,       # Last displayed book (for semantic context awareness)
     "context_chapter": None,    # Last displayed chapter
 }
 
@@ -181,6 +182,18 @@ async def process_transcript(text: str, is_final: bool = False):
     # Parse with regex for explicit references
     candidates = parse_text_for_verses(text)
 
+    # Fallback: semantic search for implied quotes
+    if not candidates:
+        semantic_candidates = search_similar_verses(
+            text,
+            translation=state["current_translation"],
+            context_book=state.get("context_book"),
+            context_chapter=state.get("context_chapter"),
+            top_k=3
+        )
+        if semantic_candidates:
+            candidates.extend(semantic_candidates)
+
     if candidates:
         # Broadcast candidates to the operator dashboard
         candidates_msg = json.dumps({
@@ -240,7 +253,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "set_duration":
                 state["display_duration"] = int(msg.get("duration", 15))
                 await broadcast_state()
-                
+
             elif msg_type == "manual_verse":
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
