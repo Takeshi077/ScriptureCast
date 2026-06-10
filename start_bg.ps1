@@ -16,7 +16,11 @@ try {
 
 # Launch server as a completely detached process (survives tool exit)
 $psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = "python"
+if (Test-Path "$PSScriptRoot\.venv\Scripts\python.exe") {
+    $psi.FileName = "$PSScriptRoot\.venv\Scripts\python.exe"
+} else {
+    $psi.FileName = "python"
+}
 $psi.Arguments = "run.py"
 $psi.WorkingDirectory = $PSScriptRoot
 $psi.UseShellExecute = $true
