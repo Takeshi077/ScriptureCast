@@ -386,6 +386,14 @@ input[type="number"] { width: 70px; text-align: center; }
     font-size: 13px;
 }
 
+.status-message {
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 0;
+    animation: slideIn 0.3s ease;
+}
+
 @keyframes slideIn {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
