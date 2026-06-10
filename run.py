@@ -52,11 +52,12 @@ def wait_for_port_free(host, port, timeout=5):
             return True
     return False
 
-if __name__ == "__main__":
+def start_server():
+    """Start the uvicorn server. Returns False if the port can't be freed."""
     free_port(HOST, PORT)
     if not wait_for_port_free(HOST, PORT):
         print(f"ERROR: Port {PORT} is still in use after cleanup. Cannot start server.")
-        sys.exit(1)
+        return False
 
     print("=" * 52)
     print("  ScriptureCast Server Starting")
@@ -77,3 +78,32 @@ if __name__ == "__main__":
         ws_ping_interval=None,
         ws_ping_timeout=None,
     )
+    return True
+
+if __name__ == "__main__":
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            if start_server():
+                break  # Normal exit
+            else:
+                # Port couldn't be freed — retry after a short wait
+                if attempt < max_retries:
+                    print(f"  Retrying in 5 seconds (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(5)
+                    continue
+                else:
+                    print(f"  Failed to free port {PORT} after {max_retries} attempts.")
+                    sys.exit(1)
+        except KeyboardInterrupt:
+            print("\n  Server stopped by user.")
+            break
+        except Exception as e:
+            print(f"  Server crashed: {e}")
+            if attempt < max_retries:
+                print(f"  Restarting in 3 seconds (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(3)
+                continue
+            else:
+                print(f"  Server crashed {max_retries} times. Giving up.")
+                sys.exit(1)
