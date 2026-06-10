@@ -33,6 +33,7 @@ state = {
     "full_transcript": "",      # Continuous accumulation of all transcript text
     "context_book": None,       # Last displayed book (for semantic context awareness)
     "context_chapter": None,    # Last displayed chapter
+    "idle_content": {"mode": "blank", "image_url": ""},
 }
 
 # Connected clients
@@ -65,7 +66,8 @@ async def set_active_scripture(scripture_data):
     if scripture_data is not None and duration > 0:
         async def auto_clear():
             await asyncio.sleep(duration)
-            state["active_scripture"] = None
+            idle = state.get("idle_content", {"mode": "blank", "image_url": ""})
+            state["active_scripture"] = {"_idle": True, "mode": idle["mode"], "image_url": idle.get("image_url", "")}
             await broadcast_state()
 
         auto_clear_task = asyncio.create_task(auto_clear())
@@ -73,12 +75,13 @@ async def set_active_scripture(scripture_data):
     await broadcast_state()
 
 async def clear_active_scripture():
-    """Clear active scripture and cancel auto-clear."""
+    """Clear active scripture and show idle content."""
     global auto_clear_task
     if auto_clear_task is not None:
         auto_clear_task.cancel()
         auto_clear_task = None
-    state["active_scripture"] = None
+    idle = state.get("idle_content", {"mode": "blank", "image_url": ""})
+    state["active_scripture"] = {"_idle": True, "mode": idle["mode"], "image_url": idle.get("image_url", "")}
     await broadcast_state()
 
 async def _reload_active_scripture():
@@ -125,6 +128,7 @@ async def broadcast_state():
         "active_scripture": state["active_scripture"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
+        "idle_content": state["idle_content"],
     })
     await _safe_send(message)
 
@@ -229,6 +233,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
+            "idle_content": state["idle_content"],
         }))
     except Exception:
         active_websockets.discard(websocket)
@@ -252,6 +257,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 
             elif msg_type == "set_duration":
                 state["display_duration"] = int(msg.get("duration", 15))
+                await broadcast_state()
+
+            elif msg_type == "set_idle_content":
+                idle = msg.get("idle_content", {})
+                if "mode" in idle:
+                    state["idle_content"]["mode"] = idle["mode"]
+                if "image_url" in idle:
+                    state["idle_content"]["image_url"] = idle["image_url"]
                 await broadcast_state()
 
             elif msg_type == "manual_verse":
