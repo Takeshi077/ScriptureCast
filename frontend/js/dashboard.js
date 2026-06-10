@@ -243,6 +243,12 @@ async function startRecording() {
         source = audioContext.createMediaStreamSource(mediaStream);
         scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
+        // ScriptProcessorNode is deprecated — without connecting to destination,
+        // modern browsers optimize away the audio graph and onaudioprocess never fires.
+        // Use a zero-gain node to keep the graph alive without speaker feedback.
+        const silentGain = audioContext.createGain();
+        silentGain.gain.value = 0;
+
         scriptProcessor.onaudioprocess = (e) => {
             if (!isRecording) return;
             const inputData = e.inputBuffer.getChannelData(0);
@@ -265,6 +271,8 @@ async function startRecording() {
             isRecording = true;
 
             source.connect(scriptProcessor);
+            scriptProcessor.connect(silentGain);
+            silentGain.connect(audioContext.destination);
         };
 
         aaiWs.onmessage = (event) => {
@@ -301,12 +309,14 @@ async function startRecording() {
 
         aaiWs.onerror = (err) => {
             console.error('AssemblyAI WebSocket error:', err);
+            appendStatusMessage('Live transcription connection failed. Check console for details.');
             stopRecording();
         };
 
         aaiWs.onclose = (event) => {
             console.log('AssemblyAI WebSocket closed:', event.code, event.reason);
             if (isRecording) {
+                appendStatusMessage('Live transcription disconnected unexpectedly.');
                 stopRecording();
             }
         };
@@ -642,6 +652,14 @@ function escHtml(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+function appendStatusMessage(text) {
+    const el = document.createElement('p');
+    el.className = 'status-message';
+    el.textContent = text;
+    transcriptFeed.appendChild(el);
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
 // ── Boot ───────────────────────────────────────────────────
