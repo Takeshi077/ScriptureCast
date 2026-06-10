@@ -715,7 +715,7 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 #idle-upload-label:hover {
-    background: var(--hover);
+    background: #1e3350;
 }
 
 #idle-upload-label.uploading {
