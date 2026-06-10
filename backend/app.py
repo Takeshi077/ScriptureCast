@@ -267,7 +267,22 @@ async def websocket_endpoint(websocket: WebSocket):
                 if "mode" in idle:
                     state["idle_content"]["mode"] = idle["mode"]
                 if "image_url" in idle:
+                    old_url = state["idle_content"].get("image_url", "")
                     state["idle_content"]["image_url"] = idle["image_url"]
+                    # Clean up old uploaded file if being replaced
+                    if idle["image_url"] != old_url and old_url.startswith("/uploads/"):
+                        old_path = os.path.join(UPLOADS_DIR, os.path.basename(old_url))
+                        if os.path.exists(old_path):
+                            try:
+                                os.remove(old_path)
+                            except OSError:
+                                pass
+                # If currently showing idle content, update the display immediately
+                if state["active_scripture"] and state["active_scripture"].get("_idle"):
+                    state["active_scripture"].update({
+                        "mode": state["idle_content"]["mode"],
+                        "image_url": state["idle_content"].get("image_url", ""),
+                    })
                 await broadcast_state()
 
             elif msg_type == "manual_verse":
