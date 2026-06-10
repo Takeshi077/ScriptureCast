@@ -6,6 +6,8 @@ import json
 import os
 import time
 import tempfile
+import uuid
+import shutil
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
@@ -20,6 +22,7 @@ aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4e
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_embeddings()
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -308,6 +311,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # HTML endpoints to serve frontend files directly for easy local opening
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+UPLOADS_DIR = os.path.join(BASE_DIR, "data", "uploads")
 
 @app.get("/")
 async def get_dashboard():
@@ -372,6 +376,26 @@ async def api_transcribe(file: UploadFile = File(...)):
     finally:
         if tmp and os.path.exists(tmp):
             os.unlink(tmp)
+
+@app.post("/api/upload-image")
+async def api_upload_image(file: UploadFile = File(...)):
+    """Upload an image for idle/background display."""
+    allowed = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"}
+    ext = os.path.splitext(file.filename or ".png")[1].lower()
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = os.path.join(UPLOADS_DIR, filename)
+    try:
+        with open(dest, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"url": f"/uploads/{filename}"}
+
+# Mount uploaded files at /uploads/
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 # Mount frontend files (css, js, images) at /frontend
 if os.path.exists(FRONTEND_DIR):

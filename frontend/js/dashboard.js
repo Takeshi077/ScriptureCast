@@ -31,7 +31,9 @@ const countdownTimer  = document.getElementById('countdown-timer');
 const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
 const idleModeSelect  = document.getElementById('idle-mode-select');
-const idleImageInput  = document.getElementById('idle-image-input');
+const idleFileInput   = document.getElementById('idle-file-input');
+const idleUploadLabel = document.getElementById('idle-upload-label');
+const idlePreview     = document.getElementById('idle-preview');
 const idleImageRow    = document.getElementById('idle-image-row');
 
 // Fallback text input DOM
@@ -383,7 +385,13 @@ function handleStateUpdate(state) {
     // Sync idle content
     if (state.idle_content) {
         idleModeSelect.value = state.idle_content.mode || 'blank';
-        idleImageInput.value = state.idle_content.image_url || '';
+        const url = state.idle_content.image_url || '';
+        if (url) {
+            idlePreview.src = url;
+            idlePreview.classList.remove('hidden');
+        } else {
+            idlePreview.classList.add('hidden');
+        }
         idleImageRow.classList.toggle('hidden', state.idle_content.mode !== 'image');
     }
 
@@ -631,8 +639,32 @@ idleModeSelect.addEventListener('change', () => {
     send({ type: 'set_idle_content', idle_content: { mode: idleModeSelect.value } });
 });
 
-idleImageInput.addEventListener('change', () => {
-    send({ type: 'set_idle_content', idle_content: { image_url: idleImageInput.value } });
+idleFileInput.addEventListener('change', async () => {
+    const file = idleFileInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    idleUploadLabel.classList.add('uploading');
+    idleUploadLabel.textContent = 'Uploading…';
+
+    try {
+        const resp = await fetch('/api/upload-image', { method: 'POST', body: formData });
+        if (!resp.ok) throw new Error('Upload failed');
+        const data = await resp.json();
+
+        idlePreview.src = data.url;
+        idlePreview.classList.remove('hidden');
+        send({ type: 'set_idle_content', idle_content: { image_url: data.url } });
+        idleUploadLabel.textContent = 'Upload Image';
+    } catch (err) {
+        alert('Image upload failed: ' + err.message);
+        idleUploadLabel.textContent = 'Upload Image';
+    } finally {
+        idleUploadLabel.classList.remove('uploading');
+        idleFileInput.value = '';
+    }
 });
 
 // ── Manual Verse Lookup ────────────────────────────────────
