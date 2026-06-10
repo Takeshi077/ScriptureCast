@@ -9,7 +9,17 @@ import tempfile
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
-from .semantic import ensure_embeddings, search_similar_verses
+
+# Semantic search (optional — requires torch/scikit-learn)
+try:
+    from .semantic import ensure_embeddings, search_similar_verses
+    HAS_SEMANTIC = True
+except ImportError:
+    HAS_SEMANTIC = False
+    def ensure_embeddings():
+        pass
+    def search_similar_verses(text, translation="KJV", context_book=None, context_chapter=None, top_k=3):
+        return []
 
 import assemblyai as aai
 import requests
@@ -19,7 +29,10 @@ aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4e
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ensure_embeddings()
+    if HAS_SEMANTIC:
+        ensure_embeddings()
+    else:
+        print("  Semantic verse search disabled (optional deps not installed)")
     yield
 
 app = FastAPI(lifespan=lifespan)
