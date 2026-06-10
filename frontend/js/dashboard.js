@@ -260,7 +260,6 @@ async function startRecording() {
             };
 
             source.connect(scriptProcessor);
-            scriptProcessor.connect(audioContext.destination);
         };
 
         aaiWs.onmessage = (event) => {
@@ -417,14 +416,17 @@ function renderCandidates(candidates) {
     const placeholder = candidatesList.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
 
-    candidates.forEach(candidate => {
+    // Process in reverse so first array item (highest confidence) ends up at top
+    // insertBefore(firstChild) reverses order, so we pre-reverse to cancel it out
+    candidates.slice().reverse().forEach(candidate => {
         // Avoid duplicates already in list
-        const existing = document.querySelector(`[data-ref="${candidate.book} ${candidate.chapter}:${candidate.verse_start}"]`);
+        const refKey = `${candidate.book} ${candidate.chapter}:${candidate.verse_start ?? ''}`;
+        const existing = document.querySelector(`[data-ref="${refKey}"]`);
         if (existing) return;
 
         const item = document.createElement('div');
         item.className = 'candidate-item';
-        item.dataset.ref = `${candidate.book} ${candidate.chapter}:${candidate.verse_start}`;
+        item.dataset.ref = refKey;
 
         const refStr = buildRefString(candidate);
         const confClass = candidate.confidence >= 85 ? 'conf-high' : candidate.confidence >= 65 ? 'conf-medium' : 'conf-low';

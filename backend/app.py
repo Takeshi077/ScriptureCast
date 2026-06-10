@@ -342,7 +342,7 @@ async def get_assemblyai_token():
     try:
         api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
         response = requests.get(
-            "https://streaming.assemblyai.com/v3/token?expires_in_seconds=60",
+            "https://streaming.assemblyai.com/v3/token?expires_in_seconds=600",
             headers={"Authorization": api_key}
         )
         if response.status_code != 200:
