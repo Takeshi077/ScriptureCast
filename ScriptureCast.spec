@@ -1,23 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
-
-datas = [('frontend', 'frontend'), ('data\\bible.db', 'data'), ('data\\embeddings', 'data\\embeddings')]
-binaries = []
-hiddenimports = ['backend', 'backend.app', 'backend.parser', 'backend.database', 'backend.semantic', 'uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto', 'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto', 'sentence_transformers', 'sklearn', 'sklearn.feature_extraction', 'sklearn.feature_extraction.text', 'sklearn.metrics.pairwise', 'joblib']
-tmp_ret = collect_all('sklearn')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['run.py'],
     pathex=[],
-    binaries=binaries,
-    datas=datas,
-    hiddenimports=hiddenimports,
+    binaries=[],
+    datas=[('frontend', 'frontend'), ('data\\bible.db', 'data')],
+    hiddenimports=['backend', 'backend.app', 'backend.parser', 'backend.database', 'uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto', 'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['numpy', 'sklearn', 'scipy', 'joblib', 'sentence_transformers', 'torch', 'transformers'],
     noarchive=False,
     optimize=0,
 )
