@@ -9,9 +9,6 @@ import tempfile
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
-from .transcriber import (
-    init_model, start_transcribing, stop_transcribing, _model_available,
-)
 
 import assemblyai as aai
 import requests
