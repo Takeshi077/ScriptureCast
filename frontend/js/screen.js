@@ -51,12 +51,18 @@ function showIdle(activeScripture) {
     container.classList.remove('visible');
     container.classList.add('hidden');
 
-    if (activeScripture.mode === 'image' && activeScripture.image_url) {
-        idleImage.src = activeScripture.image_url;
-        idleContainer.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            idleContainer.classList.add('visible');
-        });
+    if (activeScripture.mode === 'image') {
+        const dataUrl = localStorage.getItem('scripturecast_idle_image');
+        if (dataUrl) {
+            idleImage.src = dataUrl;
+            idleContainer.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                idleContainer.classList.add('visible');
+            });
+        } else {
+            idleContainer.classList.remove('visible');
+            idleContainer.classList.add('hidden');
+        }
     } else {
         idleContainer.classList.remove('visible');
         idleContainer.classList.add('hidden');
