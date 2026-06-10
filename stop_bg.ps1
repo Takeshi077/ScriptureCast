@@ -5,14 +5,14 @@ $pidFile = Join-Path $logDir "server.pid"
 # Try PID file first
 $stopped = $false
 if (Test-Path $pidFile) {
-    $pid = Get-Content $pidFile -Raw -ErrorAction SilentlyContinue
-    if ($pid) {
-        $pid = $pid.Trim()
+    $rawPid = Get-Content $pidFile -Raw -ErrorAction SilentlyContinue
+    if ($rawPid) {
+        $rawPid = $rawPid.Trim()
         try {
-            $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+            $proc = Get-Process -Id $rawPid -ErrorAction SilentlyContinue
             if ($proc -and $proc.ProcessName -eq 'python') {
-                Write-Host "Stopping server (PID $pid)..." -ForegroundColor Yellow
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                Write-Host "Stopping server (PID $rawPid)..." -ForegroundColor Yellow
+                Stop-Process -Id $rawPid -Force -ErrorAction SilentlyContinue
                 Start-Sleep -Seconds 1
                 Write-Host "Server stopped." -ForegroundColor Green
                 $stopped = $true
