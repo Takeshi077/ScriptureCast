@@ -71,6 +71,9 @@ active_websockets = set()
 # Auto-clear task handle
 auto_clear_task = None
 
+# Minimum gap between auto-displays (seconds)
+_last_display_time = 0.0
+
 async def set_active_scripture(scripture_data):
     """Set active scripture and schedule auto-clear."""
     global auto_clear_task
@@ -427,11 +430,24 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
         if active_websockets:
             await _safe_send(candidates_msg)
         
-        # QV-05: Auto-select highest >90% confidence, or show top 2-3
-        high_conf = [c for c in candidates if c["confidence"] >= 90]
-        if high_conf:
-            # Auto-display the highest-confidence match
-            await _display_candidate(high_conf[0])
+        # Auto-display: only for explicit references or very clear semantic matches
+        global _last_display_time
+        now = time.time()
+        if now - _last_display_time >= 3.0:
+            auto_candidate = None
+            for c in candidates:
+                is_regex = c.get("type") != "semantic"
+                if is_regex and c["confidence"] >= 90:
+                    auto_candidate = c
+                    break
+            if auto_candidate is None:
+                for c in candidates:
+                    if c["confidence"] >= 95 and might_be_quote(text):
+                        auto_candidate = c
+                        break
+            if auto_candidate:
+                _last_display_time = now
+                await _display_candidate(auto_candidate)
 
 # WebSocket endpoint
 @app.websocket("/ws")
