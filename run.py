@@ -22,7 +22,7 @@ def free_port(host, port):
     try:
         if sys.platform == "win32":
             result = subprocess.run(
-                f'netstat -ano | findstr "LISTENING" | findstr ":{port}"',
+                f'netstat -ano | findstr "LISTENING" | findstr ":{port} "',
                 shell=True, capture_output=True, text=True, timeout=5
             )
             for line in result.stdout.strip().splitlines():
