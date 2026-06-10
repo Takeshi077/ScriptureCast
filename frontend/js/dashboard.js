@@ -51,6 +51,7 @@ let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
+let _sentTexts = new Set();
 
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
@@ -203,11 +204,8 @@ function initSpeechRecognition() {
         if (newFinal) {
             const text = newFinal.trim();
             if (text) {
-                const sep = fullTranscript ? ' ' : '';
-                fullTranscript += sep + text;
-                if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
-                    fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
-                }
+                _sentTexts.add(text);
+                setTimeout(() => _sentTexts.delete(text), 3000);
                 send({ type: 'transcript', text });
             }
         }
@@ -217,12 +215,9 @@ function initSpeechRecognition() {
         if (interimText) {
             micToggleBtn.classList.add('speaking');
             setLiveLabel(true);
+            updateTranscriptDisplay();
         } else {
             micToggleBtn.classList.remove('speaking');
-        }
-
-        if (newFinal || interimText) {
-            updateTranscriptDisplay();
         }
     };
 
@@ -338,14 +333,20 @@ function handleStateUpdate(state) {
 
 // ── Transcript Handler ─────────────────────────────────────
 function handleTranscript(text, isFinal) {
-    if (isFinal) {
-        const sep = fullTranscript ? ' ' : '';
-        fullTranscript += sep + text;
-        if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
-            fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
-        }
-    } else {
+    if (!isFinal) {
         interimText = text;
+        updateTranscriptDisplay();
+        return;
+    }
+    // Skip echoes of text we sent ourselves
+    if (_sentTexts.has(text)) {
+        _sentTexts.delete(text);
+        return;
+    }
+    const sep = fullTranscript ? ' ' : '';
+    fullTranscript += sep + text;
+    if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+        fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
     }
     updateTranscriptDisplay();
 }
@@ -535,7 +536,8 @@ textSendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     if (!text) return;
 
-    handleTranscript(text, true);
+    _sentTexts.add(text);
+    setTimeout(() => _sentTexts.delete(text), 3000);
     send({ type: 'transcript', text });
     textInput.value = '';
 });
