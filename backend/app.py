@@ -182,17 +182,23 @@ async def process_transcript(text: str, is_final: bool = False):
     # Parse with regex for explicit references
     candidates = parse_text_for_verses(text)
 
-    # Fallback: semantic search for implied quotes
-    if not candidates:
-        semantic_candidates = search_similar_verses(
-            text,
-            translation=state["current_translation"],
-            context_book=state.get("context_book"),
-            context_chapter=state.get("context_chapter"),
-            top_k=3
-        )
-        if semantic_candidates:
-            candidates.extend(semantic_candidates)
+    # Semantic search for implied quotes (always runs alongside regex)
+    top_k = 3 if candidates else 5
+    semantic_candidates = search_similar_verses(
+        text,
+        translation=state["current_translation"],
+        context_book=state.get("context_book"),
+        context_chapter=state.get("context_chapter"),
+        top_k=top_k
+    )
+    seen = {f"{c['book']}{c.get('chapter')}{c.get('verse_start')}" for c in candidates}
+    for sc in semantic_candidates:
+        key = f"{sc['book']}{sc.get('chapter')}{sc.get('verse_start')}"
+        if key not in seen:
+            candidates.append(sc)
+
+    # Sort all candidates by confidence descending
+    candidates.sort(key=lambda c: c.get("confidence", 0), reverse=True)
 
     if candidates:
         # Broadcast candidates to the operator dashboard
