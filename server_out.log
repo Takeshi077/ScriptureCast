@@ -9,3 +9,4 @@
 
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
+INFO:     127.0.0.1:62593 - "GET /api/verse?book=Amos&chapter=3&verse=3 HTTP/1.1" 200 OK
