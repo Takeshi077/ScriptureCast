@@ -45,7 +45,7 @@ let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
-let currentTheme = {};
+
 
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
