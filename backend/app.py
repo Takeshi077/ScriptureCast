@@ -153,7 +153,6 @@ async def broadcast_state():
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
         "recent_transcripts": state["recent_transcripts"],
-        "full_transcript": state["full_transcript"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
         "rolling_buffer_text": _get_recent_buffer_text(),
@@ -357,8 +356,8 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
             if entry["timestamp"] >= cutoff
         ]
     
-    # Broadcast transcript to WebSocket clients (for backend ASR or non-browser sources)
-    if broadcast_to_clients and is_final and active_websockets:
+    # Broadcast transcript to all connected clients
+    if is_final and active_websockets:
         transcript_msg = json.dumps({
             "type": "transcript",
             "text": text,
@@ -430,7 +429,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
             "recent_transcripts": state["recent_transcripts"],
-            "full_transcript": state["full_transcript"],
+            "full_transcript": "",
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
             "rolling_buffer_text": _get_recent_buffer_text(),
