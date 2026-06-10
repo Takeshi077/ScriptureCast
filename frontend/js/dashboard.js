@@ -166,9 +166,6 @@ function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
     if (inputSampleRate === outputSampleRate) {
         return buffer;
     }
-    const sampleRateRatio = inputSampleRate / outputSampleRate;
-    const newLength = Math.round(buffer.length / sampleSampleRateRatio());
-    // Wait, let's use standard downsampling logic
     const ratio = inputSampleRate / outputSampleRate;
     const result = new Float32Array(Math.round(buffer.length / ratio));
     let writeOffset = 0;
