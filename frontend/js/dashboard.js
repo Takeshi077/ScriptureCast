@@ -233,7 +233,25 @@ async function startRecording() {
             }
         });
 
-        // 3. Connect to AssemblyAI Streaming WebSocket directly
+        // 3. Create audio pipeline BEFORE opening WebSocket (needs user gesture context)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        source = audioContext.createMediaStreamSource(mediaStream);
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        scriptProcessor.onaudioprocess = (e) => {
+            if (!isRecording) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+            const pcm16 = float32ToInt16(downsampled);
+            if (aaiWs && aaiWs.readyState === WebSocket.OPEN) {
+                aaiWs.send(pcm16);
+            }
+        };
+
+        // 4. Connect to AssemblyAI Streaming WebSocket
         const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&speech_model=u3-rt-pro&token=${token}`;
         aaiWs = new WebSocket(wsUrl);
 
@@ -243,21 +261,6 @@ async function startRecording() {
             micToggleBtn.title = 'Click to stop live transcription';
             setLiveLabel(true);
             isRecording = true;
-
-            // Start audio pipeline
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            source = audioContext.createMediaStreamSource(mediaStream);
-            scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-
-            scriptProcessor.onaudioprocess = (e) => {
-                if (!isRecording) return;
-                const inputData = e.inputBuffer.getChannelData(0);
-                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
-                const pcm16 = float32ToInt16(downsampled);
-                if (aaiWs && aaiWs.readyState === WebSocket.OPEN) {
-                    aaiWs.send(pcm16);
-                }
-            };
 
             source.connect(scriptProcessor);
         };
@@ -283,6 +286,10 @@ async function startRecording() {
                         micToggleBtn.classList.remove('speaking');
                     }
                 }
+            } else if (msg.type === 'SessionTerminated' || msg.type === 'Termination') {
+                console.warn('AssemblyAI session terminated:', msg.reason || msg.error);
+            } else if (msg.error) {
+                console.error('AssemblyAI error:', msg.error);
             }
         };
 
