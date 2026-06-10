@@ -6,36 +6,29 @@ import json
 import os
 import time
 import tempfile
-import functools
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
 from .transcriber import (
     init_model, start_transcribing, stop_transcribing, _model_available,
 )
-from .semantic import ensure_embeddings, search_similar_verses, might_be_quote
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load ASR model and semantic embeddings in a background thread so we don't block server startup
+    # Startup: Load ASR model in a background thread so we don't block server startup
     import threading
     def bg_startup():
         init_model()
-        ensure_embeddings()
     threading.Thread(target=bg_startup, daemon=True).start()
 
     loop = asyncio.get_running_loop()
     def handle_transcription(text):
-        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True, broadcast_to_clients=True), loop)
+        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True), loop)
 
     start_transcribing(handle_transcription)
 
-    # Start continuous quote detection background loop
-    detection_task = asyncio.create_task(_quote_detection_loop())
-
     yield
-    # Shutdown: Stop transcription and cancel detection loop
-    detection_task.cancel()
+    # Shutdown: Stop transcription
     stop_transcribing()
 
 app = FastAPI(lifespan=lifespan)
@@ -49,21 +42,7 @@ state = {
     "full_transcript": "",      # Continuous accumulation of all transcript text
     "context_book": None,       # Last displayed book (for QV-07 context awareness)
     "context_chapter": None,    # Last displayed chapter
-    "rolling_buffer": [],       # List of {"text": str, "timestamp": float} for last ~15s
-    "detected_quotes": [],      # List of recently detected quote matches
-    "quote_detection_enabled": True,
 }
-
-# Internal: dedup set for recently detected quote references
-_recent_quote_refs = {}  # ref_key -> timestamp
-
-# Constants for continuous quote detection
-QUOTE_BUFFER_SECONDS = 15
-QUOTE_PHRASE_MIN = 5
-QUOTE_PHRASE_MAX = 20
-QUOTE_DETECTION_INTERVAL = 3.0
-QUOTE_CONFIDENCE_THRESHOLD = 82
-QUOTE_DEDUP_SECONDS = 30
 
 # Connected clients
 active_websockets = set()
@@ -157,9 +136,6 @@ async def broadcast_state():
         "active_scripture": state["active_scripture"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
-        "rolling_buffer_text": _get_recent_buffer_text(),
-        "detected_quotes": state["detected_quotes"],
-        "quote_detection_enabled": state["quote_detection_enabled"],
     })
     await _safe_send(message)
 
@@ -185,181 +161,8 @@ async def _display_candidate(candidate):
     return False
 
 
-async def _merge_candidates(regex_candidates, semantic_candidates):
-    """Merge regex and semantic candidates, deduplicating by reference."""
-    seen = set()
-    merged = []
-    for c in regex_candidates + semantic_candidates:
-        key = f"{c['book']}|{c['chapter']}|{c.get('verse_start')}|{c.get('verse_end')}"
-        if key not in seen:
-            seen.add(key)
-            merged.append(c)
-    merged.sort(key=lambda c: c["confidence"], reverse=True)
-    return merged
-
-
-def _extract_phrases(text):
-    """Extract overlapping 5-20 word phrases from text for semantic matching."""
-    words = text.strip().split()
-    if len(words) < QUOTE_PHRASE_MIN:
-        return []
-    phrases = []
-    seen = set()
-    max_len = min(QUOTE_PHRASE_MAX, len(words))
-    for length in range(QUOTE_PHRASE_MIN, max_len + 1, 5):
-        step = max(1, length // 3)
-        for start in range(0, len(words) - length + 1, step):
-            phrase = " ".join(words[start:start + length])
-            key = " ".join(words[start:start + 3])
-            if key not in seen:
-                seen.add(key)
-                phrases.append(phrase)
-    return phrases[:10]  # Cap at 10 phrases per cycle
-
-
-def _get_recent_buffer_text():
-    """Get combined text from the last QUOTE_BUFFER_SECONDS from rolling_buffer."""
-    now = time.time()
-    cutoff = now - QUOTE_BUFFER_SECONDS
-    recent = [entry["text"] for entry in state["rolling_buffer"] if entry["timestamp"] >= cutoff]
-    return " ".join(recent).strip()
-
-
-def _is_recently_detected(ref_key):
-    """Check if a verse ref was detected recently (within dedup window)."""
-    now = time.time()
-    # Clean stale entries
-    stale = [k for k, v in _recent_quote_refs.items() if now - v > QUOTE_DEDUP_SECONDS]
-    for k in stale:
-        del _recent_quote_refs[k]
-    if ref_key in _recent_quote_refs:
-        return True
-    _recent_quote_refs[ref_key] = now
-    return False
-
-
-_last_broadcast_time = 0.0
-
-async def _quote_detection_loop():
-    """Background loop: every 3s, extract phrases from rolling buffer and match against Bible verses."""
-    loop = asyncio.get_running_loop()
-    executor = _get_executor()
-    global _last_broadcast_time
-    while True:
-        try:
-            await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
-
-            if not state.get("quote_detection_enabled", True):
-                await broadcast_state()
-                continue
-
-            text = _get_recent_buffer_text()
-            if not text or len(text.split()) < QUOTE_PHRASE_MIN:
-                await broadcast_state()
-                continue
-            phrases = _extract_phrases(text)
-            if not phrases:
-                await broadcast_state()
-                continue
-
-            # Run all phrase searches concurrently
-            tasks = []
-            for phrase in phrases:
-                tasks.append(
-                    asyncio.wait_for(
-                        loop.run_in_executor(
-                            executor,
-                            functools.partial(
-                                search_similar_verses,
-                                phrase,
-                                translation=state["current_translation"],
-                                context_book=state.get("context_book"),
-                                context_chapter=state.get("context_chapter"),
-                                top_k=1,
-                            ),
-                        ),
-                        timeout=15.0,
-                    )
-                )
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Collect all new quotes from this cycle
-            new_quotes = []
-            best_candidate = None
-            best_confidence = 0
-            for phrase_idx, result in enumerate(results):
-                if isinstance(result, Exception):
-                    continue
-                for c in result:
-                    if c["confidence"] >= QUOTE_CONFIDENCE_THRESHOLD:
-                        ref_key = f"{c['book']}|{c['chapter']}|{c['verse_start']}"
-                        if _is_recently_detected(ref_key):
-                            continue
-                        if c["confidence"] > best_confidence:
-                            best_candidate = c
-                            best_confidence = c["confidence"]
-                        quote_entry = {
-                            "phrase": phrases[phrase_idx],
-                            "reference": f"{c['book']} {c['chapter']}:{c['verse_start']}",
-                            "confidence": c["confidence"],
-                            "book": c["book"],
-                            "chapter": c["chapter"],
-                            "verse_start": c["verse_start"],
-                            "verse_end": c["verse_end"],
-                            "text": c.get("text", ""),
-                            "type": "semantic",
-                            "timestamp": time.time()
-                        }
-                        new_quotes.append(quote_entry)
-                        state["detected_quotes"].insert(0, quote_entry)
-                        if len(state["detected_quotes"]) > 15:
-                            state["detected_quotes"].pop()
-
-            # Display only the best match once per cycle
-            if best_candidate:
-                await _display_candidate(best_candidate)
-
-            # Send quote_detected messages and broadcast state
-            if new_quotes and active_websockets:
-                for q in new_quotes:
-                    await _safe_send(json.dumps({
-                        "type": "quote_detected",
-                        "quote": q
-                    }))
-
-            # One state broadcast per cycle
-            now = time.time()
-            if now - _last_broadcast_time >= QUOTE_DETECTION_INTERVAL:
-                await broadcast_state()
-                _last_broadcast_time = now
-
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            pass
-
-
-_executor = None
-_process_executor = None
-
-def _get_executor():
-    global _executor
-    if _executor is None:
-        import concurrent.futures
-        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-    return _executor
-
-def _get_process_executor():
-    """Dedicated 1-worker executor for process_transcript — never blocked by quote detection."""
-    global _process_executor
-    if _process_executor is None:
-        import concurrent.futures
-        _process_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="process")
-    return _process_executor
-
-
 # Helper to process transcript text and detect verses
-async def process_transcript(text: str, is_final: bool = False, broadcast_to_clients: bool = False):
+async def process_transcript(text: str, is_final: bool = False):
     # Add to transcript history
     state["recent_transcripts"].append({"text": text, "is_final": is_final})
     if len(state["recent_transcripts"]) > 10:
@@ -375,60 +178,20 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
         else:
             state["full_transcript"] = text
 
-    # Update rolling buffer for continuous quote detection (only final)
-    if is_final:
-        now = time.time()
-        state["rolling_buffer"].append({"text": text, "timestamp": now})
-        # Prune entries older than QUOTE_BUFFER_SECONDS
-        cutoff = now - QUOTE_BUFFER_SECONDS
-        state["rolling_buffer"] = [
-            entry for entry in state["rolling_buffer"]
-            if entry["timestamp"] >= cutoff
-        ]
-    
-    # Broadcast transcript to all connected clients (only backend ASR, not browser echo)
-    if is_final and broadcast_to_clients and active_websockets:
-        transcript_msg = json.dumps({
-            "type": "transcript",
-            "text": text,
-            "is_final": True
-        })
-        await _safe_send(transcript_msg)
-    
-    # Only run detection on final transcripts
+        # Broadcast transcript to all connected clients (only backend ASR, not browser echo)
+        if active_websockets:
+            transcript_msg = json.dumps({
+                "type": "transcript",
+                "text": text,
+                "is_final": True
+            })
+            await _safe_send(transcript_msg)
+
     if not is_final:
         return
 
-    # Step 1: Parse with regex for explicit references (fast, no offload needed)
-    regex_candidates = parse_text_for_verses(text)
-
-    # Step 2: Run semantic search off the event loop (TF-IDF + sentence-transformer is heavy)
-    semantic_candidates = []
-    if not regex_candidates or might_be_quote(text):
-        try:
-            loop = asyncio.get_running_loop()
-            executor = _get_process_executor()
-            semantic_candidates = await asyncio.wait_for(
-                loop.run_in_executor(
-                    executor,
-                    functools.partial(
-                        search_similar_verses,
-                        text,
-                        translation=state["current_translation"],
-                        context_book=state.get("context_book"),
-                        context_chapter=state.get("context_chapter"),
-                        top_k=3 if regex_candidates else 5,
-                    ),
-                ),
-                timeout=30.0,
-            )
-        except asyncio.TimeoutError:
-            semantic_candidates = []
-        except Exception:
-            semantic_candidates = []
-
-    # Step 3: Merge all candidates
-    candidates = await _merge_candidates(regex_candidates, semantic_candidates)
+    # Parse with regex for explicit references
+    candidates = parse_text_for_verses(text)
 
     if candidates:
         # Broadcast candidates to the operator dashboard
@@ -438,25 +201,16 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
         })
         if active_websockets:
             await _safe_send(candidates_msg)
-        
-        # Auto-display: only for explicit references or very clear semantic matches
+
+        # Auto-display verse references with high confidence
         global _last_display_time
         now = time.time()
         if now - _last_display_time >= 3.0:
-            auto_candidate = None
             for c in candidates:
-                is_regex = c.get("type") != "semantic"
-                if is_regex and c["confidence"] >= 90:
-                    auto_candidate = c
+                if c["confidence"] >= 90:
+                    _last_display_time = now
+                    await _display_candidate(c)
                     break
-            if auto_candidate is None:
-                for c in candidates:
-                    if c["confidence"] >= 95 and might_be_quote(text):
-                        auto_candidate = c
-                        break
-            if auto_candidate:
-                _last_display_time = now
-                await _display_candidate(auto_candidate)
 
 # WebSocket endpoint
 @app.websocket("/ws")
@@ -474,9 +228,6 @@ async def websocket_endpoint(websocket: WebSocket):
             "full_transcript": "",
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
-            "rolling_buffer_text": _get_recent_buffer_text(),
-            "detected_quotes": state.get("detected_quotes", []),
-            "quote_detection_enabled": state.get("quote_detection_enabled", True),
         }))
     except BaseException:
         active_websockets.discard(websocket)
@@ -530,10 +281,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
                 })
-                
-            elif msg_type == "toggle_quote_detection":
-                state["quote_detection_enabled"] = msg.get("enabled", True)
-                await broadcast_state()
 
             elif msg_type == "transcript":
                 speech_text = msg.get("text", "")

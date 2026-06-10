@@ -36,12 +36,6 @@ const textInputArea   = document.getElementById('text-input-area');
 const textInput       = document.getElementById('text-input');
 const textSendBtn     = document.getElementById('text-send-btn');
 
-// Quote Detection DOM
-const quoteStatus     = document.getElementById('quote-detection-status');
-const quoteToggleBtn  = document.getElementById('quote-toggle-btn');
-const rollingBufferEl = document.getElementById('rolling-buffer-text');
-const detectedQuotesList = document.getElementById('detected-quotes-list');
-
 // ── State ──────────────────────────────────────────────────
 let socket = null;
 let countdownInterval = null;
@@ -85,9 +79,6 @@ function connect() {
                 break;
             case 'manual_verse_result':
                 handleManualVerseResult(msg);
-                break;
-            case 'quote_detected':
-                handleQuoteDetected(msg.quote);
                 break;
         }
     };
@@ -305,21 +296,6 @@ function handleStateUpdate(state) {
 
     // Update projector preview
     updateProjectorPreview(state.active_scripture, state.display_duration);
-
-    // Update rolling buffer display
-    if (state.rolling_buffer_text !== undefined) {
-        updateRollingBuffer(state.rolling_buffer_text);
-    }
-
-    // Update detected quotes
-    if (state.detected_quotes !== undefined) {
-        renderDetectedQuotes(state.detected_quotes);
-    }
-
-    // Update quote detection enabled status
-    if (state.quote_detection_enabled !== undefined) {
-        updateQuoteDetectionStatus(state.quote_detection_enabled);
-    }
 
     // Load full transcript from server on initial connect
     if (state.full_transcript && !fullTranscript && !interimText) {
@@ -575,90 +551,10 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-// ── Continuous Quote Detection ─────────────────────────────
-function updateRollingBuffer(text) {
-    if (!rollingBufferEl) return;
-    const placeholder = rollingBufferEl.querySelector('.placeholder-text');
-    if (placeholder) placeholder.remove();
-    rollingBufferEl.textContent = text || 'Waiting for transcript…';
-}
-
-function handleQuoteDetected(quote) {
-    if (!quote) return;
-    renderDetectedQuotes([quote], true);
-}
-
-function renderDetectedQuotes(quotes, prepend) {
-    if (!detectedQuotesList || !quotes || quotes.length === 0) return;
-
-    // Remove placeholder
-    const placeholder = detectedQuotesList.querySelector('.placeholder-text');
-    if (placeholder) placeholder.remove();
-
-    const items = Array.from(detectedQuotesList.querySelectorAll('.quote-match-item'));
-    const existingRefs = new Set(items.map(el => el.dataset.ref));
-
-    quotes.forEach(quote => {
-        const refKey = `${quote.book} ${quote.chapter}:${quote.verse_start}`;
-        if (existingRefs.has(refKey)) return;
-        existingRefs.add(refKey);
-
-        const item = document.createElement('div');
-        item.className = 'quote-match-item';
-        item.dataset.ref = refKey;
-
-        item.innerHTML = `
-            <div class="quote-match-header">
-                <span class="quote-match-ref">${escHtml(quote.reference)}</span>
-                <span class="quote-match-conf">${quote.confidence}%</span>
-            </div>
-            <div class="quote-match-phrase">"${escHtml(quote.phrase)}"</div>
-        `;
-
-        if (prepend) {
-            detectedQuotesList.insertBefore(item, detectedQuotesList.firstChild);
-        } else {
-            detectedQuotesList.appendChild(item);
-        }
-    });
-
-    // Cap at 10 items
-    const all = detectedQuotesList.querySelectorAll('.quote-match-item');
-    while (all.length > 10) {
-        all[all.length - 1].remove();
-    }
-}
-
-function updateQuoteDetectionStatus(enabled) {
-    if (!quoteStatus || !quoteToggleBtn) return;
-    if (enabled) {
-        quoteStatus.className = 'status-badge status-on';
-        quoteStatus.innerHTML = '<span class="status-dot"></span> Active';
-        quoteToggleBtn.textContent = 'Pause';
-        quoteToggleBtn.classList.remove('paused');
-    } else {
-        quoteStatus.className = 'status-badge status-inactive';
-        quoteStatus.innerHTML = '<span class="status-dot"></span> Paused';
-        quoteToggleBtn.textContent = 'Resume';
-        quoteToggleBtn.classList.add('paused');
-    }
-}
-
-// Quote detection toggle
-if (quoteToggleBtn) {
-    quoteToggleBtn.addEventListener('click', () => {
-        const isActive = quoteToggleBtn.textContent.trim() === 'Pause';
-        send({ type: 'toggle_quote_detection', enabled: !isActive });
-    });
-}
-
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initContinuousNote();
 initSpeechRecognition();
-// Note: Backend ASR (faster-whisper medium) is the primary speech-to-text engine.
-// Browser speech recognition is optional — toggle the mic button to use it.
-// The backend ASR streams transcriptions automatically via WebSocket.
 if (hasSpeechSupport()) {
     micToggleBtn.title = 'Optional: click to use browser speech recognition as a backup';
 }
