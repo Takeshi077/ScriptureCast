@@ -45,7 +45,6 @@ let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
-let _sentTexts = new Set();
 
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
@@ -195,8 +194,6 @@ function initSpeechRecognition() {
         if (newFinal) {
             const text = newFinal.trim();
             if (text) {
-                _sentTexts.add(text);
-                setTimeout(() => _sentTexts.delete(text), 3000);
                 send({ type: 'transcript', text });
             }
         }
@@ -312,11 +309,6 @@ function handleTranscript(text, isFinal) {
     if (!isFinal) {
         interimText = text;
         updateTranscriptDisplay();
-        return;
-    }
-    // Skip echoes of text we sent ourselves
-    if (_sentTexts.has(text)) {
-        _sentTexts.delete(text);
         return;
     }
     const sep = fullTranscript ? ' ' : '';
@@ -512,8 +504,13 @@ textSendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     if (!text) return;
 
-    _sentTexts.add(text);
-    setTimeout(() => _sentTexts.delete(text), 3000);
+    const sep = fullTranscript ? ' ' : '';
+    fullTranscript += sep + text;
+    if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+        fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
+    }
+    updateTranscriptDisplay();
+
     send({ type: 'transcript', text });
     textInput.value = '';
 });
