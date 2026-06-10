@@ -8,6 +8,8 @@ import os
 import socket
 import subprocess
 import time
+import webbrowser
+import threading
 
 # Ensure the project root is on the path so backend package imports work
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -67,6 +69,10 @@ def start_server():
     print(f"  API Docs    -> http://localhost:{PORT}/docs")
     print("=" * 52)
     print("  Press Ctrl+C to stop\n")
+
+    # Open browser after a short delay
+    if os.environ.get("SCRIPTURECAST_NO_BROWSER") != "1":
+        threading.Timer(2.0, lambda: webbrowser.open(f"http://localhost:{PORT}")).start()
 
     uvicorn.run(
         "backend.app:app",
