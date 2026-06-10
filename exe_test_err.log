@@ -1,0 +1,26 @@
+INFO:     Started server process [9856]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "backend\semantic.py", line 102, in ensure_embeddings
+    _vectorizer, _tfidf_matrix, _verse_info = _load_index()
+                                              ~~~~~~~~~~~^^
+  File "backend\semantic.py", line 84, in _load_index
+    from scipy.sparse import load_npz
+ModuleNotFoundError: No module named 'scipy'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "starlette\routing.py", line 638, in lifespan
+  File "contextlib.py", line 214, in __aenter__
+  File "backend\app.py", line 33, in lifespan
+    ensure_embeddings()
+    ~~~~~~~~~~~~~~~~~^^
+  File "backend\semantic.py", line 106, in ensure_embeddings
+    _vectorizer, _tfidf_matrix, _verse_info = _build_index()
+                                              ~~~~~~~~~~~~^^
+  File "backend\semantic.py", line 62, in _build_index
+    from sklearn.feature_extraction.text import TfidfVectorizer
+ModuleNotFoundError: No module named 'sklearn'
+
+ERROR:    Application startup failed. Exiting.
