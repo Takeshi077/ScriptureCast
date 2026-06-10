@@ -3,9 +3,6 @@ import json
 import re
 import sqlite3
 import threading
-import numpy as np
-from joblib import dump, load as jload
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
