@@ -61,7 +61,7 @@ _recent_quote_refs = {}  # ref_key -> timestamp
 QUOTE_BUFFER_SECONDS = 15
 QUOTE_PHRASE_MIN = 5
 QUOTE_PHRASE_MAX = 20
-QUOTE_DETECTION_INTERVAL = 1.5
+QUOTE_DETECTION_INTERVAL = 3.0
 QUOTE_CONFIDENCE_THRESHOLD = 82
 QUOTE_DEDUP_SECONDS = 30
 
@@ -237,38 +237,45 @@ def _is_recently_detected(ref_key):
     return False
 
 
+_last_broadcast_time = 0.0
+
 async def _quote_detection_loop():
-    """Background loop: every 1.5s, extract phrases from rolling buffer and match against Bible verses."""
+    """Background loop: every 3s, extract phrases from rolling buffer and match against Bible verses."""
     loop = asyncio.get_running_loop()
+    executor = _get_executor()
+    global _last_broadcast_time
     while True:
         try:
             await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
 
-            # Always broadcast current state (rolling buffer, detected quotes) at this interval
-            await broadcast_state()
-
             if not state.get("quote_detection_enabled", True):
+                await broadcast_state()
                 continue
 
             text = _get_recent_buffer_text()
             if not text or len(text.split()) < QUOTE_PHRASE_MIN:
+                await broadcast_state()
                 continue
             phrases = _extract_phrases(text)
             if not phrases:
+                await broadcast_state()
                 continue
             for phrase in phrases:
-                # Yield control so WebSocket messages aren't starved
                 await asyncio.sleep(0)
                 try:
-                    candidates = await loop.run_in_executor(
-                        None, functools.partial(
-                            search_similar_verses,
-                            phrase,
-                            translation=state["current_translation"],
-                            context_book=state.get("context_book"),
-                            context_chapter=state.get("context_chapter"),
-                            top_k=1
-                        )
+                    candidates = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            executor,
+                            functools.partial(
+                                search_similar_verses,
+                                phrase,
+                                translation=state["current_translation"],
+                                context_book=state.get("context_book"),
+                                context_chapter=state.get("context_chapter"),
+                                top_k=1,
+                            ),
+                        ),
+                        timeout=15.0,
                     )
                 except Exception:
                     continue
@@ -293,18 +300,33 @@ async def _quote_detection_loop():
                         state["detected_quotes"].insert(0, quote_entry)
                         if len(state["detected_quotes"]) > 15:
                             state["detected_quotes"].pop()
-                        # Broadcast the new quote to all clients
                         quote_msg = json.dumps({
                             "type": "quote_detected",
                             "quote": quote_entry
                         })
                         if active_websockets:
                             await _safe_send(quote_msg)
+
+            # Broadcast state at most once per cycle, but only if data changed
+            now = time.time()
+            if now - _last_broadcast_time >= QUOTE_DETECTION_INTERVAL:
+                await broadcast_state()
+                _last_broadcast_time = now
+
         except asyncio.CancelledError:
             raise
         except Exception:
-            # Log and continue — never let this loop die unexpectedly
             pass
+
+
+_executor = None
+
+def _get_executor():
+    global _executor
+    if _executor is None:
+        import concurrent.futures
+        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+    return _executor
 
 
 # Helper to process transcript text and detect verses
@@ -348,19 +370,33 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
     if not is_final:
         return
 
-    # Step 1: Parse with regex for explicit references
+    # Step 1: Parse with regex for explicit references (fast, no offload needed)
     regex_candidates = parse_text_for_verses(text)
 
-    # Step 2: Run semantic search for quotes without references (QV-01, QV-02, QV-03)
+    # Step 2: Run semantic search off the event loop (TF-IDF + sentence-transformer is heavy)
     semantic_candidates = []
     if not regex_candidates or might_be_quote(text):
-        semantic_candidates = search_similar_verses(
-            text,
-            translation=state["current_translation"],
-            context_book=state.get("context_book"),
-            context_chapter=state.get("context_chapter"),
-            top_k=3 if regex_candidates else 5
-        )
+        try:
+            loop = asyncio.get_running_loop()
+            executor = _get_executor()
+            semantic_candidates = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    functools.partial(
+                        search_similar_verses,
+                        text,
+                        translation=state["current_translation"],
+                        context_book=state.get("context_book"),
+                        context_chapter=state.get("context_chapter"),
+                        top_k=3 if regex_candidates else 5,
+                    ),
+                ),
+                timeout=30.0,
+            )
+        except asyncio.TimeoutError:
+            semantic_candidates = []
+        except Exception:
+            semantic_candidates = []
 
     # Step 3: Merge all candidates
     candidates = await _merge_candidates(regex_candidates, semantic_candidates)
