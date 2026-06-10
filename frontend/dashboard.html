@@ -136,6 +136,27 @@
                 </div>
             </div>
 
+            <!-- Idle content settings -->
+            <div id="idle-settings">
+                <div class="panel-header" style="border-top: 1px solid var(--border);">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v10H4V5zm2 2v2h8V7H6zm0 4v2h5v-2H6z"/></svg>
+                        Between Verses
+                    </h2>
+                </div>
+                <div id="idle-body">
+                    <div class="idle-mode-row">
+                        <select id="idle-mode-select">
+                            <option value="blank">Blank screen</option>
+                            <option value="image">Show image</option>
+                        </select>
+                    </div>
+                    <div id="idle-image-row" class="hidden">
+                        <input id="idle-image-input" type="text" placeholder="https://example.com/image.jpg" aria-label="Image URL for between-verse display">
+                    </div>
+                </div>
+            </div>
+
             <!-- Action buttons -->
             <div id="preview-actions">
                 <button id="open-screen-btn" class="btn btn-secondary" onclick="window.open('/screen', '_blank')">

@@ -4,6 +4,8 @@ const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 const container = document.getElementById('display-container');
 const referenceEl = document.getElementById('reference');
 const textEl = document.getElementById('scripture-text');
+const idleContainer = document.getElementById('idle-container');
+const idleImage = document.getElementById('idle-image');
 
 let socket = null;
 let displayTimeout = null;
@@ -45,13 +47,51 @@ function connect() {
     };
 }
 
+function showIdle(activeScripture) {
+    container.classList.remove('visible');
+    container.classList.add('hidden');
+
+    if (activeScripture.mode === 'image' && activeScripture.image_url) {
+        idleImage.src = activeScripture.image_url;
+        idleContainer.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            idleContainer.classList.add('visible');
+        });
+    } else {
+        idleContainer.classList.remove('visible');
+        idleContainer.classList.add('hidden');
+    }
+}
+
+function hideAll() {
+    container.classList.remove('visible');
+    container.classList.add('hidden');
+    idleContainer.classList.remove('visible');
+    idleContainer.classList.add('hidden');
+}
+
 function updateDisplay(activeScripture, durationSeconds) {
     if (displayTimeout) {
         clearTimeout(displayTimeout);
         displayTimeout = null;
     }
 
-    if (activeScripture && activeScripture.text) {
+    if (!activeScripture) {
+        hideAll();
+        return;
+    }
+
+    // Idle content (between verses)
+    if (activeScripture._idle) {
+        showIdle(activeScripture);
+        return;
+    }
+
+    // Normal scripture display
+    idleContainer.classList.remove('visible');
+    idleContainer.classList.add('hidden');
+
+    if (activeScripture.text) {
         referenceEl.textContent = activeScripture.reference || '';
         textEl.textContent = `"${activeScripture.text}"`;
         textEl.scrollTop = 0;
