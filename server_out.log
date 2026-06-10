@@ -1,0 +1,16 @@
+  Killed stale process (PID 14288) on port 8000
+====================================================
+  ScriptureCast Server Starting
+====================================================
+  Dashboard   -> http://localhost:8000
+  Screen      -> http://localhost:8000/screen
+  API Docs    -> http://localhost:8000/docs
+====================================================
+  Press Ctrl+C to stop
+
+  Loaded cached TF-IDF index (69129 verses)
+  Loading semantic re-ranker model...
+INFO:     127.0.0.1:62099 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62099 - "GET /frontend/css/dashboard.css?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62100 - "GET /frontend/js/dashboard.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62100 - "GET /favicon.ico HTTP/1.1" 404 Not Found
