@@ -386,8 +386,8 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
             if entry["timestamp"] >= cutoff
         ]
     
-    # Broadcast transcript to all connected clients
-    if is_final and active_websockets:
+    # Broadcast transcript to all connected clients (only backend ASR, not browser echo)
+    if is_final and broadcast_to_clients and active_websockets:
         transcript_msg = json.dumps({
             "type": "transcript",
             "text": text,
