@@ -30,6 +30,9 @@ const countdownLabel  = document.getElementById('countdown-label');
 const countdownTimer  = document.getElementById('countdown-timer');
 const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
+const idleModeSelect  = document.getElementById('idle-mode-select');
+const idleImageInput  = document.getElementById('idle-image-input');
+const idleImageRow    = document.getElementById('idle-image-row');
 
 // Fallback text input DOM
 const textInputArea   = document.getElementById('text-input-area');
@@ -377,6 +380,13 @@ function handleStateUpdate(state) {
     // Update projector preview
     updateProjectorPreview(state.active_scripture, state.display_duration);
 
+    // Sync idle content
+    if (state.idle_content) {
+        idleModeSelect.value = state.idle_content.mode || 'blank';
+        idleImageInput.value = state.idle_content.image_url || '';
+        idleImageRow.classList.toggle('hidden', state.idle_content.mode !== 'image');
+    }
+
     // Load full transcript from server on initial connect
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
@@ -526,15 +536,28 @@ function updateProjectorPreview(activeScripture, duration) {
     clearCountdown();
 
     if (activeScripture) {
-        previewRef.textContent = activeScripture.reference;
-        previewText.textContent = `"${activeScripture.text}"`;
+        if (activeScripture._idle) {
+            previewRef.textContent = '';
+            if (activeScripture.mode === 'image' && activeScripture.image_url) {
+                previewText.innerHTML = `Idle: <img src="${escHtml(activeScripture.image_url)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;margin:0 auto;">`;
+            } else {
+                previewText.textContent = 'Idle: blank screen';
+            }
+            displayStatus.className = 'status-badge status-idle';
+            displayStatus.innerHTML = '<span class="status-dot"></span> Idle';
+            countdownFill.style.width = '0%';
+            countdownTimer.textContent = '—';
+        } else {
+            previewRef.textContent = activeScripture.reference;
+            previewText.textContent = `"${activeScripture.text}"`;
 
-        displayStatus.className = 'status-badge status-on';
-        displayStatus.innerHTML = '<span class="status-dot"></span> Live';
+            displayStatus.className = 'status-badge status-on';
+            displayStatus.innerHTML = '<span class="status-dot"></span> Live';
 
-        // Start countdown if duration set
-        if (duration && duration > 0) {
-            startCountdown(duration);
+            // Start countdown if duration set
+            if (duration && duration > 0) {
+                startCountdown(duration);
+            }
         }
     } else {
         previewRef.textContent = '—';
@@ -600,6 +623,16 @@ textInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         textSendBtn.click();
     }
+});
+
+// ── Idle Content Controls ───────────────────────────────────
+idleModeSelect.addEventListener('change', () => {
+    idleImageRow.classList.toggle('hidden', idleModeSelect.value !== 'image');
+    send({ type: 'set_idle_content', idle_content: { mode: idleModeSelect.value } });
+});
+
+idleImageInput.addEventListener('change', () => {
+    send({ type: 'set_idle_content', idle_content: { image_url: idleImageInput.value } });
 });
 
 // ── Manual Verse Lookup ────────────────────────────────────
