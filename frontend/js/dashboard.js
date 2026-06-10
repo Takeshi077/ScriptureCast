@@ -260,7 +260,8 @@ async function startRecording() {
         };
 
         // 4. Connect to AssemblyAI Streaming WebSocket
-        const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&speech_model=u3-rt-pro&token=${token}`;
+        // v3 API: use type field with Turn/Termination messages
+        const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&format_turns=true&speech_model=u3-rt-pro&token=${token}`;
         aaiWs = new WebSocket(wsUrl);
 
         aaiWs.onopen = () => {
@@ -278,7 +279,7 @@ async function startRecording() {
         aaiWs.onmessage = (event) => {
             const msg = JSON.parse(event.data);
 
-            if (msg.message_type === 'FinalTranscript') {
+            if (msg.type === 'Turn') {
                 const text = msg.transcript || '';
                 const isFinal = msg.end_of_turn;
 
@@ -291,16 +292,13 @@ async function startRecording() {
                 } else {
                     interimText = text;
                     updateTranscriptDisplay();
+                    if (interimText) {
+                        micToggleBtn.classList.add('speaking');
+                    } else {
+                        micToggleBtn.classList.remove('speaking');
+                    }
                 }
-            } else if (msg.message_type === 'PartialTranscript') {
-                interimText = msg.transcript || '';
-                updateTranscriptDisplay();
-                if (interimText) {
-                    micToggleBtn.classList.add('speaking');
-                } else {
-                    micToggleBtn.classList.remove('speaking');
-                }
-            } else if (msg.message_type === 'SessionTerminated') {
+            } else if (msg.type === 'Termination') {
                 console.warn('AssemblyAI session terminated:', msg.reason || msg.error);
             } else if (msg.error) {
                 console.error('AssemblyAI error:', msg.error);
