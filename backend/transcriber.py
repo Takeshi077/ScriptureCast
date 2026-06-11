@@ -23,11 +23,19 @@ _model_lock = threading.Lock()
 # Audio capture settings
 SAMPLE_RATE = 16000
 CHANNELS = 1
+<<<<<<< HEAD
 BLOCK_DURATION = 0.5          # seconds per audio block
 RMS_THRESHOLD = 0.015         # voice activity threshold (higher = less sensitive to background hum)
 SILENCE_TIMEOUT = 1.2         # seconds of silence before finalising utterance (lower = faster response)
 MAX_UTTERANCE = 30            # max seconds for a single utterance
 MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large or .en versions)
+=======
+BLOCK_DURATION = 0.2          # seconds per audio block
+RMS_THRESHOLD = 0.002         # voice activity threshold (lower = more sensitive)
+SILENCE_TIMEOUT = 1.0         # seconds of silence before finalising utterance
+MAX_UTTERANCE = 30            # max seconds for a single utterance
+MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large-v3) — small is 10x faster than medium on CPU
+>>>>>>> 53df082e90cbb134eb9e108464397e631a84a717
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -169,8 +177,27 @@ def _finalise_utterance(buffer, callback_fn):
     audio_np = np.concatenate(buffer, axis=0).flatten()
     if len(audio_np) < SAMPLE_RATE * 0.5:  # ignore <0.5s clips
         return
+<<<<<<< HEAD
     # Enqueue the transcription task
     transcription_queue.put((audio_np, callback_fn))
+=======
+
+    audio_np = _normalise_audio(audio_np)
+
+    try:
+        segments, _ = _model.transcribe(
+            audio_np,
+            beam_size=3,
+            language="en",
+            condition_on_previous_text=False,
+        )
+        text = " ".join(seg.text for seg in segments).strip()
+        if text:
+            print(f"  ASR: {text}")
+            callback_fn(text)
+    except Exception as e:
+        print(f"  ASR transcription error: {e}")
+>>>>>>> 53df082e90cbb134eb9e108464397e631a84a717
 
 def start_transcribing(callback_fn):
     global is_listening, listen_thread, worker_thread
