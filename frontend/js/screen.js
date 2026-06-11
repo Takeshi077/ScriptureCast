@@ -83,3 +83,9 @@ function safeJson(str) {
 }
 
 connect();
+
+// Prevent back/forward navigation from leaving the screen
+window.addEventListener('popstate', (e) => {
+    history.pushState(null, '', location.href);
+});
+history.pushState(null, '', location.href);
