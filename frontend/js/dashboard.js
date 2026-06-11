@@ -607,6 +607,18 @@ clearBtn.addEventListener('click', () => {
     send({ type: 'clear' });
 });
 
+// ── Logout ──────────────────────────────────────────────────
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    });
+}
+
 // ── Fallback Text Input ────────────────────────────────────
 textSendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
