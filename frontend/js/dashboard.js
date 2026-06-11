@@ -278,6 +278,8 @@ async function startRecording() {
                 if (isFinal) {
                     interimText = '';
                     updateTranscriptDisplay();
+                    micToggleBtn.classList.remove('speaking');
+                    micLiveLabel.classList.remove('speaking');
                     if (text.trim()) {
                         send({ type: 'transcript', text: text.trim() });
                     }
@@ -286,8 +288,10 @@ async function startRecording() {
                     updateTranscriptDisplay();
                     if (interimText) {
                         micToggleBtn.classList.add('speaking');
+                        micLiveLabel.classList.add('speaking');
                     } else {
                         micToggleBtn.classList.remove('speaking');
+                        micLiveLabel.classList.remove('speaking');
                     }
                 }
             } else if (msg.type === 'Termination') {
@@ -326,6 +330,7 @@ function stopRecording() {
     
     isRecording = false;
     micToggleBtn.classList.remove('active', 'speaking', 'connecting');
+    micLiveLabel.classList.remove('speaking');
     micToggleBtn.title = 'Click to start live transcription';
     setLiveLabel(false);
     interimText = '';
