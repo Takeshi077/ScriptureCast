@@ -1,6 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import asyncio
 import json
 import os
@@ -9,6 +9,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
+from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
 
 # Semantic search (optional — requires torch/scikit-learn)
 try:
@@ -36,6 +37,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(auth_router)
 
 # Global State
 state = {
@@ -237,6 +240,10 @@ async def process_transcript(text: str, is_final: bool = False):
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    user = get_current_user_from_ws(websocket)
+    if not user:
+        await websocket.close(code=4001)
+        return
     await websocket.accept()
     active_websockets.add(websocket)
     
@@ -313,23 +320,63 @@ async def websocket_endpoint(websocket: WebSocket):
         print("WebSocket error:", e)
         active_websockets.discard(websocket)
 
-# HTML endpoints to serve frontend files directly for easy local opening
+# Frontend directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
+HTML_CACHE = {}
+
+def _read_html(name):
+    path = os.path.join(FRONTEND_DIR, name)
+    if path in HTML_CACHE:
+        return HTML_CACHE[path]
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        HTML_CACHE[path] = content
+        return content
+    return None
+
 @app.get("/")
-async def get_dashboard():
-    dashboard_path = os.path.join(FRONTEND_DIR, "dashboard.html")
-    if os.path.exists(dashboard_path):
-        return FileResponse(dashboard_path)
-    return HTMLResponse("Dashboard HTML file not found.", status_code=404)
+async def get_landing():
+    html = _read_html("index.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Landing page not found.", status_code=404)
+
+@app.get("/login")
+async def get_login():
+    html = _read_html("login.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Login page not found.", status_code=404)
+
+@app.get("/register")
+async def get_register():
+    html = _read_html("register.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Register page not found.", status_code=404)
+
+@app.get("/app")
+async def get_dashboard(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    html = _read_html("dashboard.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Dashboard not found.", status_code=404)
 
 @app.get("/screen")
-async def get_screen():
-    screen_path = os.path.join(FRONTEND_DIR, "screen.html")
-    if os.path.exists(screen_path):
-        return FileResponse(screen_path)
-    return HTMLResponse("Screen HTML file not found.", status_code=404)
+async def get_screen(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    html = _read_html("screen.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Screen not found.", status_code=404)
 
 # API endpoint for verse preview (used by dashboard candidate cards)
 @app.get("/api/verse")
