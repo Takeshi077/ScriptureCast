@@ -226,6 +226,7 @@ body {
 }
 
 .demo-screen {
+    position: relative;
     background: radial-gradient(circle at center, #111b27 0%, #080c10 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -234,6 +235,38 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.carousel-track {
+    position: relative;
+    width: 100%;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 1.5s ease, transform 1.5s ease;
+    pointer-events: none;
+}
+
+.carousel-slide.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .demo-reference {

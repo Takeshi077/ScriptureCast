@@ -498,14 +498,34 @@ function buildRefString(candidate) {
 async function fetchVersePreview(candidate, el) {
     const book = encodeURIComponent(candidate.book);
     const chapter = candidate.chapter;
-    const verse = candidate.verse_start || 1;
+    const verseStart = candidate.verse_start || 1;
+    const verseEnd = candidate.verse_end || '';
+    let url = `/api/verse?book=${book}&chapter=${chapter}&verse=${verseStart}`;
+    if (verseEnd) {
+        url += `&verse_end=${verseEnd}`;
+    }
     try {
-        const resp = await fetch(`/api/verse?book=${book}&chapter=${chapter}&verse=${verse}`);
+        const resp = await fetch(url);
         const data = await resp.json();
         if (data.error || !data.verses || data.verses.length === 0) {
             el.textContent = 'Preview unavailable';
         } else {
-            el.textContent = `"${data.verses[0].text}"`;
+            el.innerHTML = '';
+            data.verses.forEach(v => {
+                const verseSpan = document.createElement('span');
+                verseSpan.className = 'verse-span';
+                
+                const numSup = document.createElement('sup');
+                numSup.className = 'verse-num-preview';
+                numSup.textContent = v.verse;
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = v.text + ' ';
+                
+                verseSpan.appendChild(numSup);
+                verseSpan.appendChild(textSpan);
+                el.appendChild(verseSpan);
+            });
         }
     } catch {
         el.textContent = 'Preview unavailable';
@@ -523,14 +543,74 @@ function displayCandidate(candidate) {
 function handleManualVerseResult(msg) {
     lookupPreview.classList.remove('hidden');
     lookupRefLabel.textContent = msg.reference;
-    lookupTextPrev.textContent = `"${msg.text}"`;
+    
+    lookupTextPrev.innerHTML = '';
+    if (msg.verses && msg.verses.length > 0) {
+        msg.verses.forEach(v => {
+            const verseDiv = document.createElement('div');
+            verseDiv.className = 'verse-block';
+            
+            const numSup = document.createElement('sup');
+            numSup.className = 'verse-num';
+            numSup.textContent = v.verse;
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'verse-text';
+            textSpan.textContent = v.text;
+            
+            verseDiv.appendChild(numSup);
+            verseDiv.appendChild(document.createTextNode(' '));
+            verseDiv.appendChild(textSpan);
+            lookupTextPrev.appendChild(verseDiv);
+        });
+    } else {
+        const verseDiv = document.createElement('div');
+        verseDiv.className = 'verse-block';
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'verse-text';
+        textSpan.textContent = msg.text;
+        
+        verseDiv.appendChild(textSpan);
+        lookupTextPrev.appendChild(verseDiv);
+    }
 }
 
 // ── Projector Preview Update ───────────────────────────────
 function updateProjectorPreview(activeScripture) {
     if (activeScripture) {
         previewRef.textContent = activeScripture.reference;
-        previewText.textContent = `"${activeScripture.text}"`;
+        
+        previewText.innerHTML = '';
+        if (activeScripture.verses && activeScripture.verses.length > 0) {
+            activeScripture.verses.forEach(v => {
+                const verseDiv = document.createElement('div');
+                verseDiv.className = 'verse-block';
+                
+                const numSup = document.createElement('sup');
+                numSup.className = 'verse-num';
+                numSup.textContent = v.verse;
+                
+                const textSpan = document.createElement('span');
+                textSpan.className = 'verse-text';
+                textSpan.textContent = v.text;
+                
+                verseDiv.appendChild(numSup);
+                verseDiv.appendChild(document.createTextNode(' '));
+                verseDiv.appendChild(textSpan);
+                previewText.appendChild(verseDiv);
+            });
+        } else {
+            const verseDiv = document.createElement('div');
+            verseDiv.className = 'verse-block';
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'verse-text';
+            textSpan.textContent = activeScripture.text;
+            
+            verseDiv.appendChild(textSpan);
+            previewText.appendChild(verseDiv);
+        }
 
         displayStatus.className = 'status-badge status-on';
         displayStatus.innerHTML = '<span class="status-dot"></span> Live';

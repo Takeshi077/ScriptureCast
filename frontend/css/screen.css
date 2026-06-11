@@ -100,6 +100,7 @@ html, body {
     }
 }
 
+
 /* Ultra-wide / cinema screens */
 @media (min-width: 2000px) {
     #scripture-text {
@@ -107,6 +108,22 @@ html, body {
         line-height: 1.3;
         padding: 0.5vh 10% 1vh;
     }
+}
+
+/* Inline Verse Numbers & Verse Spacing */
+.verse-block {
+    margin-bottom: 2.5vh;
+}
+.verse-block:last-child {
+    margin-bottom: 0;
+}
+.verse-num {
+    font-size: 0.65em;
+    vertical-align: super;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-right: 0.35rem;
+    opacity: 0.8;
 }
 
 
