@@ -23,7 +23,6 @@
             <h1 class="auth-title">Create your account</h1>
             <p class="auth-subtitle">Start your free trial — no credit card needed</p>
             <form id="register-form" class="auth-form">
-                <div id="auth-error" class="auth-error hidden"></div>
                 <div class="form-group">
                     <label for="name">Church / Name</label>
                     <input id="name" type="text" placeholder="Your Church or Your Name" required autocomplete="name">
@@ -36,6 +35,7 @@
                     <label for="password">Password</label>
                     <input id="password" type="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
                 </div>
+                <div id="auth-error" class="auth-error hidden"></div>
                 <button type="submit" class="auth-btn" id="register-btn">Create Account</button>
             </form>
             <p class="auth-alt">Already have an account? <a href="/login">Sign in</a></p>
