@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScriptureCast – Live Scripture Display for Churches</title>
+    <meta name="description" content="ScriptureCast automatically detects Bible verses during sermons and displays them on screen in real-time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/auth.css">
+</head>
+<body>
+    <nav id="landing-nav">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-logo">
+                    <path d="M4 6C4 4.9 4.9 4 6 4H26C27.1 4 28 4.9 28 6V22C28 23.1 27.1 24 26 24H18L14 28L10 24H6C4.9 24 4 23.1 4 22V6Z" fill="url(#navLogoGrad)"/>
+                    <path d="M10 10H22M10 14H18M10 18H15" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="navLogoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#38bdf8"/>
+                            <stop offset="100%" stop-color="#818cf8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>ScriptureCast</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="/login" class="nav-btn-secondary">Sign In</a>
+                <a href="/register" class="nav-btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <section id="hero">
+        <div class="hero-bg-glow"></div>
+        <div class="hero-content">
+            <div class="hero-badge">Live Scripture Display</div>
+            <h1 class="hero-title">Your sermon.<br>Their Bible.<span class="hero-accent">On screen.</span></h1>
+            <p class="hero-subtitle">ScriptureCast automatically detects Bible verses as you preach and displays them on the projector. No remote control, no searching, no distractions.</p>
+            <div class="hero-actions">
+                <a href="/register" class="hero-btn-primary">Start Free Trial</a>
+                <a href="#how-it-works" class="hero-btn-secondary">See How It Works</a>
+            </div>
+            <div class="hero-demo">
+                <div class="demo-screen">
+                    <div class="demo-reference">John 3:16 (KJV)</div>
+                    <div class="demo-text">"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features">
+        <div class="section-header">
+            <h2>Everything you need for scripture display</h2>
+            <p>Built for churches that want to focus on the Word, not the technology.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon auto-detect-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                </div>
+                <h3>Auto-Detect Verses</h3>
+                <p>Speak naturally — ScriptureCast recognizes verse references from your sermon and displays them instantly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon live-transcribe-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M8 12h8"/><path d="M8 8h6"/><path d="M8 16h4"/></svg>
+                </div>
+                <h3>Live Transcription</h3>
+                <p>Full sermon transcription with real-time verse detection. Keep a running record of everything spoken.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon semantic-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <h3>Semantic Search</h3>
+                <p>Even partial quotes or paraphrases are matched to the right verse using AI-powered semantic search.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon dual-screen-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <h3>Dashboard + Projector</h3>
+                <p>Operator dashboard on one screen, scripture display on the projector. Two separate views, one seamless system.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon multi-trans-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </div>
+                <h3>Multiple Translations</h3>
+                <p>Switch between KJV and WEB translations on the fly. Your preference, your display.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon simple-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h3>Zero Setup</h3>
+                <p>Open a browser tab on your laptop and projector. That's it. No cables, no software install, no training.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works">
+        <div class="section-header">
+            <h2>How It Works</h2>
+            <p>Three simple steps to get scripture on screen.</p>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Open the Dashboard</h3>
+                <p>Open the operator dashboard on your laptop. Enable speech recognition or type verses manually.</p>
+            </div>
+            <div class="step-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Preach Naturally</h3>
+                <p>As you speak, ScriptureCast transcribes in real-time and detects Bible references automatically.</p>
+            </div>
+            <div class="step-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Verse Appears on Screen</h3>
+                <p>High-confidence matches display instantly on the projector. No clicking, no searching, no distractions.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="cta">
+        <div class="cta-content">
+            <h2>Ready to try ScriptureCast?</h2>
+            <p>Start your free trial. No credit card required.</p>
+            <a href="/register" class="hero-btn-primary">Get Started Free</a>
+        </div>
+    </section>
+
+    <footer id="landing-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="footer-logo">
+                    <path d="M4 6C4 4.9 4.9 4 6 4H26C27.1 4 28 4.9 28 6V22C28 23.1 27.1 24 26 24H18L14 28L10 24H6C4.9 24 4 23.1 4 22V6Z" fill="url(#footerLogoGrad)"/>
+                    <path d="M10 10H22M10 14H18M10 18H15" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="footerLogoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#38bdf8"/>
+                            <stop offset="100%" stop-color="#818cf8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>ScriptureCast</span>
+            </div>
+            <p class="footer-tagline">Making scripture the center of every sermon.</p>
+            <p class="footer-copy">&copy; 2026 ScriptureCast. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
