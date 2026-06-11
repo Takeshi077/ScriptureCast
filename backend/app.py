@@ -54,46 +54,21 @@ state = {
 # Connected clients
 active_websockets = set()
 
-# Auto-clear task handle
-auto_clear_task = None
-
 # Minimum gap between auto-displays (seconds)
 _last_display_time = 0.0
 
 async def set_active_scripture(scripture_data):
-    """Set active scripture and schedule auto-clear."""
-    global auto_clear_task
-
-    # Cancel any existing auto-clear
-    if auto_clear_task is not None:
-        auto_clear_task.cancel()
-        auto_clear_task = None
-
+    """Set active scripture (persistent until replaced)."""
     state["active_scripture"] = scripture_data
 
-    # Track context for semantic search (QV-07)
     if scripture_data is not None and scripture_data.get("book"):
         state["context_book"] = scripture_data["book"]
         state["context_chapter"] = scripture_data.get("chapter")
-
-    # Schedule auto-clear if duration is set
-    duration = state.get("display_duration", 0)
-    if scripture_data is not None and duration > 0:
-        async def auto_clear():
-            await asyncio.sleep(duration)
-            state["active_scripture"] = None
-            await broadcast_state()
-
-        auto_clear_task = asyncio.create_task(auto_clear())
 
     await broadcast_state()
 
 async def clear_active_scripture():
     """Clear active scripture."""
-    global auto_clear_task
-    if auto_clear_task is not None:
-        auto_clear_task.cancel()
-        auto_clear_task = None
     state["active_scripture"] = None
     await broadcast_state()
 
