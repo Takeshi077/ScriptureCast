@@ -559,7 +559,7 @@ if (logoutBtn) {
             await fetch('/api/auth/logout', { method: 'POST' });
         } catch {}
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        window.location.href = '/';
     });
 }
 
