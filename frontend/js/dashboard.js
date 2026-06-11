@@ -623,3 +623,9 @@ initSpeechRecognition();
 if (hasSpeechSupport()) {
     micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
 }
+
+// Prevent back/forward navigation from leaving the app
+window.addEventListener('popstate', (e) => {
+    history.pushState(null, '', location.href);
+});
+history.pushState(null, '', location.href);
