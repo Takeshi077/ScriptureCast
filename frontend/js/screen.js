@@ -27,7 +27,7 @@ function connect() {
 
         if (msg.type === 'state') {
             _lastState = msg;
-            updateDisplay(msg.active_scripture, msg.display_duration);
+            updateDisplay(msg.active_scripture);
         }
     };
 
@@ -45,30 +45,26 @@ function connect() {
     };
 }
 
-function updateDisplay(activeScripture, durationSeconds) {
+function updateDisplay(activeScripture) {
     if (displayTimeout) {
         clearTimeout(displayTimeout);
         displayTimeout = null;
     }
 
-    if (activeScripture && activeScripture.text) {
-        referenceEl.textContent = activeScripture.reference || '';
-        textEl.textContent = `"${activeScripture.text}"`;
-        textEl.scrollTop = 0;
-
-        container.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            container.classList.add('visible');
-        });
-
-        if (durationSeconds && durationSeconds > 0) {
-            displayTimeout = setTimeout(() => {
-                hideDisplay();
-            }, durationSeconds * 1000);
-        }
-    } else {
-        hideDisplay();
+    if (!activeScripture) {
+        container.classList.remove('visible');
+        container.classList.add('hidden');
+        return;
     }
+
+    referenceEl.textContent = activeScripture.reference || '';
+    textEl.textContent = `"${activeScripture.text}"`;
+    textEl.scrollTop = 0;
+
+    container.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        container.classList.add('visible');
+    });
 }
 
 function hideDisplay() {
@@ -87,3 +83,9 @@ function safeJson(str) {
 }
 
 connect();
+
+// Prevent back/forward navigation from leaving the screen
+window.addEventListener('popstate', (e) => {
+    history.pushState(null, '', location.href);
+});
+history.pushState(null, '', location.href);

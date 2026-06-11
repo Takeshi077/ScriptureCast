@@ -23,19 +23,11 @@ _model_lock = threading.Lock()
 # Audio capture settings
 SAMPLE_RATE = 16000
 CHANNELS = 1
-<<<<<<< HEAD
-BLOCK_DURATION = 0.5          # seconds per audio block
-RMS_THRESHOLD = 0.015         # voice activity threshold (higher = less sensitive to background hum)
-SILENCE_TIMEOUT = 1.2         # seconds of silence before finalising utterance (lower = faster response)
-MAX_UTTERANCE = 30            # max seconds for a single utterance
-MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large or .en versions)
-=======
 BLOCK_DURATION = 0.2          # seconds per audio block
-RMS_THRESHOLD = 0.002         # voice activity threshold (lower = more sensitive)
-SILENCE_TIMEOUT = 1.0         # seconds of silence before finalising utterance
+RMS_THRESHOLD = 0.008         # voice activity threshold (higher = less sensitive to noise/echo)
+SILENCE_TIMEOUT = 1.5         # seconds of silence before finalising utterance (longer = less fragmenting)
 MAX_UTTERANCE = 30            # max seconds for a single utterance
 MODEL_SIZE = "small"          # whisper model size (tiny/base/small/medium/large-v3) — small is 10x faster than medium on CPU
->>>>>>> 53df082e90cbb134eb9e108464397e631a84a717
 
 def init_model():
     """Eagerly load the ASR model at startup. Returns True if successful."""
@@ -72,7 +64,7 @@ def audio_callback(indata, frames, time_info, status):
 
 def transcription_worker():
     """Background worker that pulls finished speech audio and transcribes it using Whisper."""
-    global _model, _model_ready
+    global _model, _model_ready, _last_transcribed_text, _last_transcribed_time
     while is_listening:
         try:
             task = transcription_queue.get(timeout=0.5)
@@ -84,15 +76,22 @@ def transcription_worker():
         audio_np, callback_fn = task
         try:
             if _model_ready and _model is not None:
+                audio_np = _normalise_audio(audio_np)
                 segments, _ = _model.transcribe(
                     audio_np,
-                    beam_size=1,
+                    beam_size=3,
                     language="en",
+                    condition_on_previous_text=False,
                     vad_filter=True,
                     vad_parameters=dict(min_silence_duration_ms=500)
                 )
                 text = " ".join(seg.text for seg in segments).strip()
                 if text:
+                    now = time.time()
+                    if text == _last_transcribed_text and now - _last_transcribed_time < 5.0:
+                        continue
+                    _last_transcribed_text = text
+                    _last_transcribed_time = now
                     print(f"  ASR: {text}")
                     callback_fn(text)
         except Exception as e:
@@ -171,33 +170,25 @@ def transcription_loop(callback_fn):
         while is_listening:
             time.sleep(1.0)
 
+def _normalise_audio(audio_np):
+    """Peak-normalise audio to [-1, 1] range for better Whisper accuracy."""
+    peak = np.max(np.abs(audio_np))
+    if peak > 0:
+        return audio_np / peak
+    return audio_np
+
+# Track last transcribed text to suppress echo repeats
+_last_transcribed_text = ""
+_last_transcribed_time = 0
 def _finalise_utterance(buffer, callback_fn):
+    global _last_transcribed_text, _last_transcribed_time
     if not buffer or not _model_ready:
         return
     audio_np = np.concatenate(buffer, axis=0).flatten()
     if len(audio_np) < SAMPLE_RATE * 0.5:  # ignore <0.5s clips
         return
-<<<<<<< HEAD
     # Enqueue the transcription task
     transcription_queue.put((audio_np, callback_fn))
-=======
-
-    audio_np = _normalise_audio(audio_np)
-
-    try:
-        segments, _ = _model.transcribe(
-            audio_np,
-            beam_size=3,
-            language="en",
-            condition_on_previous_text=False,
-        )
-        text = " ".join(seg.text for seg in segments).strip()
-        if text:
-            print(f"  ASR: {text}")
-            callback_fn(text)
-    except Exception as e:
-        print(f"  ASR transcription error: {e}")
->>>>>>> 53df082e90cbb134eb9e108464397e631a84a717
 
 def start_transcribing(callback_fn):
     global is_listening, listen_thread, worker_thread

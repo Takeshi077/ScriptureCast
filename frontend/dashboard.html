@@ -38,13 +38,14 @@
                     <option value="WEB">WEB</option>
                 </select>
             </div>
-            <div id="duration-group">
-                <label for="duration-input">Auto-clear (s)</label>
-                <input id="duration-input" type="number" min="0" max="120" value="15" step="5">
-            </div>
+
             <button id="clear-btn" class="btn btn-danger" aria-label="Clear display">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                 Clear Display
+            </button>
+            <button id="logout-btn" class="btn btn-secondary" aria-label="Sign out" title="Sign out">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+                Sign Out
             </button>
         </div>
     </header>
@@ -93,7 +94,7 @@
         <!-- ===== CENTER PANEL: Detected Verses ===== -->
         <section id="panel-center">
 
-            <!-- Detected Candidates -->
+            <!-- Detected References -->
             <div id="candidates-card" class="card">
                 <div class="panel-header">
                     <h2>
@@ -103,33 +104,6 @@
                 </div>
                 <div id="candidates-list">
                     <p class="placeholder-text">Detected verse references will appear here automatically…</p>
-                </div>
-            </div>
-
-            <!-- Continuous Quote Detection -->
-            <div id="quote-detection-card" class="card">
-                <div class="panel-header">
-                    <h2>
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z"/></svg>
-                        Quote Detection
-                    </h2>
-                    <div id="quote-detection-controls">
-                        <span id="quote-detection-status" class="status-badge status-on">
-                            <span class="status-dot"></span> Active
-                        </span>
-                        <button id="quote-toggle-btn" class="btn btn-sm btn-secondary" aria-label="Toggle continuous quote detection">
-                            Pause
-                        </button>
-                    </div>
-                </div>
-                <div id="quote-detection-body">
-                    <div id="rolling-buffer-section">
-                        <div id="rolling-buffer-label">Rolling Buffer (last 15s)</div>
-                        <div id="rolling-buffer-text" class="rolling-buffer-text">Waiting for transcript…</div>
-                    </div>
-                    <div id="detected-quotes-list">
-                        <p class="placeholder-text">Matched quotes will appear here…</p>
-                    </div>
                 </div>
             </div>
 
@@ -155,14 +129,6 @@
                 </div>
             </div>
 
-            <!-- Countdown bar -->
-            <div id="countdown-wrap">
-                <span id="countdown-label">Auto-clear in <strong id="countdown-timer">—</strong>s</span>
-                <div id="countdown-bar-track">
-                    <div id="countdown-bar-fill"></div>
-                </div>
-            </div>
-
             <!-- Action buttons -->
             <div id="preview-actions">
                 <button id="open-screen-btn" class="btn btn-secondary" onclick="window.open('/screen', '_blank')">
@@ -174,6 +140,6 @@
 
     </main>
 
-    <script src="/frontend/js/dashboard.js?v=2"></script>
+    <script src="/frontend/js/dashboard.js?v=5"></script>
 </body>
 </html>

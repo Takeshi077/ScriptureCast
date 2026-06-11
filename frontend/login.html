@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In – ScriptureCast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <a href="/" class="auth-logo">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6C4 4.9 4.9 4 6 4H26C27.1 4 28 4.9 28 6V22C28 23.1 27.1 24 26 24H18L14 28L10 24H6C4.9 24 4 23.1 4 22V6Z" fill="url(#alogo)"/>
+                    <path d="M10 10H22M10 14H18M10 18H15" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    <defs><linearGradient id="alogo" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs>
+                </svg>
+                ScriptureCast
+            </a>
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-subtitle">Sign in to your account</p>
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input id="email" type="email" placeholder="you@church.org" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                <div id="auth-error" class="auth-error hidden"></div>
+                <button type="submit" class="auth-btn" id="login-btn">Sign In</button>
+            </form>
+            <p class="auth-alt">Don't have an account? <a href="/register">Create one</a></p>
+        </div>
+    </div>
+    <script src="/frontend/js/auth.js"></script>
+</body>
+</html>

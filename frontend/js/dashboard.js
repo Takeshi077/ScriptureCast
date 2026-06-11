@@ -12,7 +12,6 @@ const connDot         = document.getElementById('conn-dot');
 const connLabel       = document.getElementById('conn-label');
 const connIndicator   = document.getElementById('connection-indicator');
 const translationSel  = document.getElementById('translation-select');
-const durationInput   = document.getElementById('duration-input');
 const clearBtn        = document.getElementById('clear-btn');
 const transcriptFeed  = document.getElementById('transcript-feed');
 const micLiveLabel    = document.getElementById('mic-live-label');
@@ -25,10 +24,6 @@ const lookupTextPrev  = document.getElementById('lookup-text-preview');
 const displayStatus   = document.getElementById('display-status');
 const previewRef      = document.getElementById('preview-reference');
 const previewText     = document.getElementById('preview-text');
-const countdownWrap   = document.getElementById('countdown-wrap');
-const countdownLabel  = document.getElementById('countdown-label');
-const countdownTimer  = document.getElementById('countdown-timer');
-const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
 
 // Fallback text input DOM
@@ -36,21 +31,13 @@ const textInputArea   = document.getElementById('text-input-area');
 const textInput       = document.getElementById('text-input');
 const textSendBtn     = document.getElementById('text-send-btn');
 
-// Quote Detection DOM
-const quoteStatus     = document.getElementById('quote-detection-status');
-const quoteToggleBtn  = document.getElementById('quote-toggle-btn');
-const rollingBufferEl = document.getElementById('rolling-buffer-text');
-const detectedQuotesList = document.getElementById('detected-quotes-list');
-
 // ── State ──────────────────────────────────────────────────
 let socket = null;
-let countdownInterval = null;
-let countdownRemaining = 0;
-let displayDuration = 15;
 let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
+
 
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
@@ -84,9 +71,6 @@ function connect() {
                 break;
             case 'manual_verse_result':
                 handleManualVerseResult(msg);
-                break;
-            case 'quote_detected':
-                handleQuoteDetected(msg.quote);
                 break;
         }
     };
@@ -125,6 +109,7 @@ const MAX_NOTE_LENGTH = 10000;
 
 // ── Continuous Note Display ─────────────────────────────────
 function initContinuousNote() {
+    if (transcriptNote) return;
     const placeholder = transcriptFeed.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
 
@@ -150,14 +135,17 @@ function updateTranscriptDisplay() {
     transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
-// ── Browser Speech Recognition ──────────────────────────────
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
+// ── AssemblyAI Streaming STT ──────────────────────────────
 let isRecording = false;
-let recognitionRestart = false;
+let audioContext = null;
+let scriptProcessor = null;
+let source = null;
+let mediaStream = null;
+let aaiWs = null;
 
 function hasSpeechSupport() {
-    return !!SpeechRecognition;
+    return !!(window.AudioContext || window.webkitAudioContext) && 
+           !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 function setLiveLabel(show) {
@@ -168,95 +156,213 @@ function showTextFallback() {
     textInputArea.classList.remove('hidden');
 }
 
+function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+    if (inputSampleRate === outputSampleRate) {
+        return buffer;
+    }
+    const ratio = inputSampleRate / outputSampleRate;
+    const result = new Float32Array(Math.round(buffer.length / ratio));
+    let writeOffset = 0;
+    let readOffset = 0;
+    while (writeOffset < result.length) {
+        const nextReadOffset = Math.round((writeOffset + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = readOffset; i < nextReadOffset && i < buffer.length; i++) {
+            accum += buffer[i];
+            count++;
+        }
+        result[writeOffset] = count > 0 ? accum / count : 0;
+        writeOffset++;
+        readOffset = nextReadOffset;
+    }
+    return result;
+}
+
+function float32ToInt16(buffer) {
+    const l = buffer.length;
+    const buf = new Int16Array(l);
+    for (let i = 0; i < l; i++) {
+        const s = Math.max(-1, Math.min(1, buffer[i]));
+        buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return buf.buffer;
+}
+
 function initSpeechRecognition() {
     if (!hasSpeechSupport()) {
         setLiveLabel(false);
         micToggleBtn.disabled = true;
-        micToggleBtn.title = 'Speech recognition not supported in this browser';
+        micToggleBtn.title = 'Speech recording not supported in this browser';
         const placeholder = transcriptFeed.querySelector('.placeholder-text');
-        if (placeholder) placeholder.textContent = 'Speech recognition is not available in this browser. Type text below instead.';
+        if (placeholder) placeholder.textContent = 'Audio input is not supported in this browser. Type text below instead.';
         showTextFallback();
         return;
     }
-
     initContinuousNote();
+}
 
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-        let newInterim = '';
-        let newFinal = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-                newFinal += result[0].transcript;
-            } else {
-                newInterim += result[0].transcript;
-            }
+async function startRecording() {
+    if (isRecording) return;
+    
+    micToggleBtn.classList.add('connecting');
+    micToggleBtn.title = 'Connecting to AssemblyAI...';
+    
+    // Create AudioContext IMMEDIATELY — before any await, to retain user gesture
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+    }
+    
+    try {
+        // 1. Get temporary token from backend
+        const tokenResp = await fetch('/api/token');
+        if (!tokenResp.ok) {
+            throw new Error(`Failed to retrieve token: ${tokenResp.statusText}`);
         }
+        const tokenData = await tokenResp.json();
+        const token = tokenData.token;
 
-        if (newFinal) {
-            const text = newFinal.trim();
-            if (text) {
-                const sep = fullTranscript ? ' ' : '';
-                fullTranscript += sep + text;
-                if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
-                    fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
-                }
-                send({ type: 'transcript', text });
+        // 2. Access microphone
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                channelCount: 1
             }
-        }
+        });
 
-        interimText = newInterim.trim();
+        // 3. Create audio pipeline
+        source = audioContext.createMediaStreamSource(mediaStream);
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
-        if (interimText) {
-            micToggleBtn.classList.add('speaking');
+        // ScriptProcessorNode is deprecated — without connecting to destination,
+        // modern browsers optimize away the audio graph and onaudioprocess never fires.
+        // Use a zero-gain node to keep the graph alive without speaker feedback.
+        const silentGain = audioContext.createGain();
+        silentGain.gain.value = 0;
+
+        scriptProcessor.onaudioprocess = (e) => {
+            if (!isRecording) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+            const pcm16 = float32ToInt16(downsampled);
+            if (aaiWs && aaiWs.readyState === WebSocket.OPEN) {
+                aaiWs.send(pcm16);
+            }
+        };
+
+        // 4. Connect to AssemblyAI Streaming WebSocket
+        // v3 API: use type field with Turn/Termination messages
+        const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&format_turns=true&speech_model=u3-rt-pro&token=${token}`;
+        aaiWs = new WebSocket(wsUrl);
+
+        aaiWs.onopen = () => {
+            micToggleBtn.classList.remove('connecting');
+            micToggleBtn.classList.add('active');
+            micToggleBtn.title = 'Click to stop live transcription';
             setLiveLabel(true);
-        } else {
-            micToggleBtn.classList.remove('speaking');
-        }
+            isRecording = true;
 
-        if (newFinal || interimText) {
-            updateTranscriptDisplay();
-        }
-    };
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(silentGain);
+            silentGain.connect(audioContext.destination);
+        };
 
-    recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-            setLiveLabel(false);
-            micToggleBtn.classList.remove('active', 'speaking');
-            isRecording = false;
-            showTextFallback();
-        } else if (event.error === 'no-speech') {
-            // Ignore — will restart automatically
-        } else {
+        aaiWs.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === 'Turn') {
+                const text = msg.transcript || '';
+                const isFinal = msg.end_of_turn;
+
+                if (isFinal) {
+                    interimText = '';
+                    updateTranscriptDisplay();
+                    if (text.trim()) {
+                        send({ type: 'transcript', text: text.trim() });
+                    }
+                } else {
+                    interimText = text;
+                    updateTranscriptDisplay();
+                    if (interimText) {
+                        micToggleBtn.classList.add('speaking');
+                    } else {
+                        micToggleBtn.classList.remove('speaking');
+                    }
+                }
+            } else if (msg.type === 'Termination') {
+                console.warn('AssemblyAI session terminated:', msg.reason || msg.error);
+            } else if (msg.error) {
+                console.error('AssemblyAI error:', msg.error);
+            }
+        };
+
+        aaiWs.onerror = (err) => {
+            console.error('AssemblyAI WebSocket error:', err);
+            appendStatusMessage('Live transcription connection failed. Check console for details.');
             stopRecording();
-        }
-    };
+        };
 
-    recognition.onend = () => {
-        micToggleBtn.classList.remove('active', 'speaking');
-        if (isRecording || recognitionRestart) {
-            recognitionRestart = false;
-            try { recognition.start(); } catch {}
-        } else {
-            setLiveLabel(false);
+        aaiWs.onclose = (event) => {
+            console.log('AssemblyAI WebSocket closed:', event.code, event.reason);
+            if (isRecording) {
+                appendStatusMessage('Live transcription disconnected unexpectedly.');
+                stopRecording();
+            }
+        };
+
+    } catch (err) {
+        console.error('Failed to start live transcription:', err);
+        alert(`Error starting microphone: ${err.message}`);
+        micToggleBtn.classList.remove('connecting', 'active');
+        isRecording = false;
+        setLiveLabel(false);
+        showTextFallback();
+    }
+}
+
+function stopRecording() {
+    if (!isRecording) return;
+    
+    isRecording = false;
+    micToggleBtn.classList.remove('active', 'speaking', 'connecting');
+    micToggleBtn.title = 'Click to start live transcription';
+    setLiveLabel(false);
+    interimText = '';
+    updateTranscriptDisplay();
+
+    // Clean up audio context & streams
+    if (scriptProcessor) {
+        scriptProcessor.onaudioprocess = null;
+        try { scriptProcessor.disconnect(); } catch {}
+        scriptProcessor = null;
+    }
+    if (source) {
+        try { source.disconnect(); } catch {}
+        source = null;
+    }
+    if (mediaStream) {
+        try {
+            mediaStream.getTracks().forEach(track => track.stop());
+        } catch {}
+        mediaStream = null;
+    }
+    if (audioContext) {
+        try { audioContext.close(); } catch {}
+        audioContext = null;
+    }
+
+    // Terminate session gracefully
+    if (aaiWs) {
+        if (aaiWs.readyState === WebSocket.OPEN) {
+            aaiWs.send(JSON.stringify({ type: 'Terminate' }));
+            aaiWs.close();
         }
-    };
+        aaiWs = null;
+    }
 }
 
 function toggleRecording() {
-    if (!recognition) {
-        initSpeechRecognition();
-        if (!recognition) return;
-    }
-
     if (isRecording) {
         stopRecording();
     } else {
@@ -264,69 +370,17 @@ function toggleRecording() {
     }
 }
 
-function startRecording() {
-    if (isRecording || !recognition) return;
-    try {
-        recognition.start();
-        isRecording = true;
-        micToggleBtn.classList.add('active');
-        setLiveLabel(true);
-    } catch (e) {
-        console.warn('Failed to start speech recognition:', e);
-    }
-}
-
-function stopRecording() {
-    isRecording = false;
-    micToggleBtn.classList.remove('active', 'speaking');
-    setLiveLabel(false);
-    if (recognition) {
-        try { recognition.stop(); } catch {}
-    }
-}
-
 micToggleBtn.addEventListener('click', toggleRecording);
 
-// Re-init on reconnect to ensure fresh state
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && isRecording) {
-        recognitionRestart = true;
-        try { recognition.abort(); } catch {}
-    }
-});
 
 // ── State Update Handler ───────────────────────────────────
 function handleStateUpdate(state) {
-    // Sync translation selector
     if (state.current_translation) {
         translationSel.value = state.current_translation;
     }
 
-    // Sync display duration
-    if (state.display_duration !== undefined) {
-        displayDuration = state.display_duration;
-        durationInput.value = displayDuration;
-    }
+    updateProjectorPreview(state.active_scripture);
 
-    // Update projector preview
-    updateProjectorPreview(state.active_scripture, state.display_duration);
-
-    // Update rolling buffer display
-    if (state.rolling_buffer_text !== undefined) {
-        updateRollingBuffer(state.rolling_buffer_text);
-    }
-
-    // Update detected quotes
-    if (state.detected_quotes !== undefined) {
-        renderDetectedQuotes(state.detected_quotes);
-    }
-
-    // Update quote detection enabled status
-    if (state.quote_detection_enabled !== undefined) {
-        updateQuoteDetectionStatus(state.quote_detection_enabled);
-    }
-
-    // Load full transcript from server on initial connect
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
         if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
@@ -338,14 +392,16 @@ function handleStateUpdate(state) {
 
 // ── Transcript Handler ─────────────────────────────────────
 function handleTranscript(text, isFinal) {
-    if (isFinal) {
-        const sep = fullTranscript ? ' ' : '';
-        fullTranscript += sep + text;
-        if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
-            fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
-        }
-    } else {
+    if (!isFinal) {
         interimText = text;
+        updateTranscriptDisplay();
+        return;
+    }
+    interimText = '';
+    const sep = fullTranscript ? ' ' : '';
+    fullTranscript += sep + text;
+    if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+        fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
     }
     updateTranscriptDisplay();
 }
@@ -363,14 +419,17 @@ function renderCandidates(candidates) {
     const placeholder = candidatesList.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
 
-    candidates.forEach(candidate => {
+    // Process in reverse so first array item (highest confidence) ends up at top
+    // insertBefore(firstChild) reverses order, so we pre-reverse to cancel it out
+    candidates.slice().reverse().forEach(candidate => {
         // Avoid duplicates already in list
-        const existing = document.querySelector(`[data-ref="${candidate.book} ${candidate.chapter}:${candidate.verse_start}"]`);
+        const refKey = `${candidate.book} ${candidate.chapter}:${candidate.verse_start ?? ''}`;
+        const existing = document.querySelector(`[data-ref="${refKey}"]`);
         if (existing) return;
 
         const item = document.createElement('div');
         item.className = 'candidate-item';
-        item.dataset.ref = `${candidate.book} ${candidate.chapter}:${candidate.verse_start}`;
+        item.dataset.ref = refKey;
 
         const refStr = buildRefString(candidate);
         const confClass = candidate.confidence >= 85 ? 'conf-high' : candidate.confidence >= 65 ? 'conf-medium' : 'conf-low';
@@ -468,49 +527,18 @@ function handleManualVerseResult(msg) {
 }
 
 // ── Projector Preview Update ───────────────────────────────
-function updateProjectorPreview(activeScripture, duration) {
-    clearCountdown();
-
+function updateProjectorPreview(activeScripture) {
     if (activeScripture) {
         previewRef.textContent = activeScripture.reference;
         previewText.textContent = `"${activeScripture.text}"`;
 
         displayStatus.className = 'status-badge status-on';
         displayStatus.innerHTML = '<span class="status-dot"></span> Live';
-
-        // Start countdown if duration set
-        if (duration && duration > 0) {
-            startCountdown(duration);
-        }
     } else {
         previewRef.textContent = '—';
         previewText.textContent = 'Nothing on display';
         displayStatus.className = 'status-badge status-inactive';
         displayStatus.innerHTML = '<span class="status-dot"></span> Off';
-        countdownFill.style.width = '0%';
-        countdownTimer.textContent = '—';
-    }
-}
-
-function startCountdown(seconds) {
-    countdownRemaining = seconds;
-    countdownFill.style.width = '100%';
-    countdownTimer.textContent = seconds;
-
-    countdownInterval = setInterval(() => {
-        countdownRemaining--;
-        const pct = Math.max(0, (countdownRemaining / seconds) * 100);
-        countdownFill.style.width = `${pct}%`;
-        countdownTimer.textContent = countdownRemaining > 0 ? countdownRemaining : '—';
-
-        if (countdownRemaining <= 0) clearCountdown();
-    }, 1000);
-}
-
-function clearCountdown() {
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
     }
 }
 
@@ -519,23 +547,30 @@ translationSel.addEventListener('change', () => {
     send({ type: 'set_translation', translation: translationSel.value });
 });
 
-durationInput.addEventListener('change', () => {
-    const val = parseInt(durationInput.value, 10);
-    if (!isNaN(val) && val >= 0) {
-        send({ type: 'set_duration', duration: val });
-    }
-});
-
 clearBtn.addEventListener('click', () => {
     send({ type: 'clear' });
 });
+
+// ── Logout ──────────────────────────────────────────────────
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    });
+}
 
 // ── Fallback Text Input ────────────────────────────────────
 textSendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     if (!text) return;
 
-    handleTranscript(text, true);
+    interimText = text;
+    updateTranscriptDisplay();
+
     send({ type: 'transcript', text });
     textInput.value = '';
 });
@@ -573,90 +608,24 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-// ── Continuous Quote Detection ─────────────────────────────
-function updateRollingBuffer(text) {
-    if (!rollingBufferEl) return;
-    const placeholder = rollingBufferEl.querySelector('.placeholder-text');
-    if (placeholder) placeholder.remove();
-    rollingBufferEl.textContent = text || 'Waiting for transcript…';
-}
-
-function handleQuoteDetected(quote) {
-    if (!quote) return;
-    renderDetectedQuotes([quote], true);
-}
-
-function renderDetectedQuotes(quotes, prepend) {
-    if (!detectedQuotesList || !quotes || quotes.length === 0) return;
-
-    // Remove placeholder
-    const placeholder = detectedQuotesList.querySelector('.placeholder-text');
-    if (placeholder) placeholder.remove();
-
-    const items = Array.from(detectedQuotesList.querySelectorAll('.quote-match-item'));
-    const existingRefs = new Set(items.map(el => el.dataset.ref));
-
-    quotes.forEach(quote => {
-        const refKey = `${quote.book} ${quote.chapter}:${quote.verse_start}`;
-        if (existingRefs.has(refKey)) return;
-        existingRefs.add(refKey);
-
-        const item = document.createElement('div');
-        item.className = 'quote-match-item';
-        item.dataset.ref = refKey;
-
-        item.innerHTML = `
-            <div class="quote-match-header">
-                <span class="quote-match-ref">${escHtml(quote.reference)}</span>
-                <span class="quote-match-conf">${quote.confidence}%</span>
-            </div>
-            <div class="quote-match-phrase">"${escHtml(quote.phrase)}"</div>
-        `;
-
-        if (prepend) {
-            detectedQuotesList.insertBefore(item, detectedQuotesList.firstChild);
-        } else {
-            detectedQuotesList.appendChild(item);
-        }
-    });
-
-    // Cap at 10 items
-    const all = detectedQuotesList.querySelectorAll('.quote-match-item');
-    while (all.length > 10) {
-        all[all.length - 1].remove();
-    }
-}
-
-function updateQuoteDetectionStatus(enabled) {
-    if (!quoteStatus || !quoteToggleBtn) return;
-    if (enabled) {
-        quoteStatus.className = 'status-badge status-on';
-        quoteStatus.innerHTML = '<span class="status-dot"></span> Active';
-        quoteToggleBtn.textContent = 'Pause';
-        quoteToggleBtn.classList.remove('paused');
-    } else {
-        quoteStatus.className = 'status-badge status-inactive';
-        quoteStatus.innerHTML = '<span class="status-dot"></span> Paused';
-        quoteToggleBtn.textContent = 'Resume';
-        quoteToggleBtn.classList.add('paused');
-    }
-}
-
-// Quote detection toggle
-if (quoteToggleBtn) {
-    quoteToggleBtn.addEventListener('click', () => {
-        const isActive = quoteToggleBtn.textContent.trim() === 'Pause';
-        send({ type: 'toggle_quote_detection', enabled: !isActive });
-    });
+function appendStatusMessage(text) {
+    const el = document.createElement('p');
+    el.className = 'status-message';
+    el.textContent = text;
+    transcriptFeed.appendChild(el);
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initContinuousNote();
 initSpeechRecognition();
-// Note: Backend ASR (faster-whisper medium) is the primary speech-to-text engine.
-// Browser speech recognition is optional — toggle the mic button to use it.
-// The backend ASR streams transcriptions automatically via WebSocket.
 if (hasSpeechSupport()) {
-    micToggleBtn.title = 'Optional: click to use browser speech recognition as a backup';
+    micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
 }
+
+// Prevent back/forward navigation from leaving the app
+window.addEventListener('popstate', (e) => {
+    history.pushState(null, '', location.href);
+});
+history.pushState(null, '', location.href);
