@@ -303,9 +303,8 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 .mic-live-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--success);
+    display: flex;
+    align-items: center;
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
@@ -314,6 +313,44 @@ input[type="number"] { width: 70px; text-align: center; }
 .mic-live-label.active {
     opacity: 1;
 }
+
+.audio-wave {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 14px;
+}
+
+.audio-wave span {
+    display: inline-block;
+    width: 3px;
+    height: 100%;
+    background-color: var(--success);
+    border-radius: 2px;
+    animation: wave-bounce 1.2s ease-in-out infinite;
+    animation-play-state: paused;
+    transform-origin: bottom;
+}
+
+.mic-live-label.speaking .audio-wave span {
+    animation-play-state: running;
+}
+
+.audio-wave span:nth-child(1) { animation-delay: 0.1s; height: 35%; }
+.audio-wave span:nth-child(2) { animation-delay: 0.3s; height: 70%; }
+.audio-wave span:nth-child(3) { animation-delay: 0.6s; height: 100%; }
+.audio-wave span:nth-child(4) { animation-delay: 0.2s; height: 60%; }
+.audio-wave span:nth-child(5) { animation-delay: 0.4s; height: 45%; }
+
+@keyframes wave-bounce {
+    0%, 100% {
+        transform: scaleY(0.3);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+
 
 .mic-btn {
     width: 32px;
