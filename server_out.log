@@ -7,19 +7,11 @@
 ====================================================
   Press Ctrl+C to stop
 
-  Loading faster-whisper (small) model… (first download may take a minute)
-  ASR model loaded successfully.
   Loaded cached TF-IDF index (69129 verses)
   Loading semantic re-ranker model...
-  Microphone input active — waiting for speech…
-  ASR: See, I think it's the, I think it's the right one.
-INFO:     127.0.0.1:54220 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54220 - "GET /screen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54262 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54262 - "GET /screen HTTP/1.1" 200 OK
-  ASR: So, can you guys listen for a bit, pay attention, pay attention, as the man of God is about to preach.
-INFO:     127.0.0.1:54444 - "GET /api/verse?book=John&chapter=1&verse=1 HTTP/1.1" 200 OK
-  ASR: I tell you guys to pay attention as the man of God is about to preach.
-  ASR: This is Kripshaw Kast, left half skip take place here, like I said I spent the whole time so I am going to post it later for you guys.  Just after all this one.
-  ASR: Can you see?  Hey, I was bad with this.  I hope you can see.
-INFO:     127.0.0.1:54574 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58458 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58592 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58593 - "GET /frontend/css/dashboard.css?v=2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58592 - "GET /frontend/js/dashboard.js?v=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58592 - "GET /api/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58597 - "GET /api/verse?book=Genesis&chapter=1&verse=1 HTTP/1.1" 200 OK

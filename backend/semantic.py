@@ -3,9 +3,12 @@ import json
 import re
 import sqlite3
 import threading
-import numpy as np
-from joblib import dump, load as jload
-from sklearn.feature_extraction.text import TfidfVectorizer
+
+try:
+    import numpy as np
+    _HAS_DEPS = True
+except ImportError:
+    _HAS_DEPS = False
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
@@ -62,6 +65,8 @@ def _load_verse_data():
 
 
 def _build_index():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from joblib import dump
     os.makedirs(CACHE_DIR, exist_ok=True)
     verses = _load_verse_data()
     texts = [_clean_text(v["text"]) for v in verses]
@@ -83,6 +88,7 @@ def _build_index():
 
 def _load_index():
     from scipy.sparse import load_npz
+    from joblib import load as jload
     vectorizer = jload(VECTORIZER_FILE)
     matrix = load_npz(MATRIX_FILE)
     with open(VERSE_INFO_FILE, "r", encoding="utf-8") as f:
@@ -91,6 +97,9 @@ def _load_index():
 
 
 def ensure_embeddings():
+    if not _HAS_DEPS:
+        print("  Semantic search disabled (numpy/scikit-learn not available)")
+        return False
     global _vectorizer, _tfidf_matrix, _verse_info
     if _vectorizer is not None and _tfidf_matrix is not None:
         return True
@@ -123,6 +132,7 @@ def _get_semantic_model():
 
 
 def _rerank_with_semantic(query_text, candidates, top_k):
+    import numpy as np
     if not candidates:
         return []
     model = _get_semantic_model()
@@ -157,6 +167,9 @@ def might_be_quote(text):
 
 
 def search_similar_verses(query_text, translation=None, context_book=None, context_chapter=None, top_k=5):
+    if not _HAS_DEPS:
+        return []
+    import numpy as np
     global _vectorizer, _tfidf_matrix, _verse_info
     if _vectorizer is None or _tfidf_matrix is None:
         ensure_embeddings()

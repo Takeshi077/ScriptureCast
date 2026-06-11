@@ -1,41 +1,44 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import asyncio
 import json
 import os
 import time
-import functools
+import tempfile
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .database import get_scripture
-from .transcriber import init_model, start_transcribing, stop_transcribing
-from .semantic import ensure_embeddings, search_similar_verses, might_be_quote
+from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
+
+# Semantic search (optional — requires torch/scikit-learn)
+try:
+    from .semantic import ensure_embeddings, search_similar_verses
+    HAS_SEMANTIC = True
+except ImportError:
+    HAS_SEMANTIC = False
+    def ensure_embeddings():
+        pass
+    def search_similar_verses(text, translation="KJV", context_book=None, context_chapter=None, top_k=3):
+        return []
+
+import assemblyai as aai
+import requests
+
+# Configure AssemblyAI API key
+aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load ASR model and semantic embeddings in a background thread so we don't block server startup
-    import threading
-    def bg_startup():
-        init_model()
+    if HAS_SEMANTIC:
         ensure_embeddings()
-    threading.Thread(target=bg_startup, daemon=True).start()
-
-    loop = asyncio.get_running_loop()
-    def handle_transcription(text):
-        asyncio.run_coroutine_threadsafe(process_transcript(text, is_final=True, broadcast_to_clients=True), loop)
-
-    start_transcribing(handle_transcription)
-
-    # Start continuous quote detection background loop
-    detection_task = asyncio.create_task(_quote_detection_loop())
-
+    else:
+        print("  Semantic verse search disabled (optional deps not installed)")
     yield
-    # Shutdown: Stop transcription and cancel detection loop
-    detection_task.cancel()
-    stop_transcribing()
 
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(auth_router)
 
 # Global State
 state = {
@@ -44,64 +47,28 @@ state = {
     "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
     "recent_transcripts": [],   # List of {"text": "...", "is_final": bool}
     "full_transcript": "",      # Continuous accumulation of all transcript text
-    "context_book": None,       # Last displayed book (for QV-07 context awareness)
+    "context_book": None,       # Last displayed book (for semantic context awareness)
     "context_chapter": None,    # Last displayed chapter
-    "rolling_buffer": [],       # List of {"text": str, "timestamp": float} for last ~15s
-    "detected_quotes": [],      # List of recently detected quote matches
-    "quote_detection_enabled": True,
 }
-
-# Internal: dedup set for recently detected quote references
-_recent_quote_refs = {}  # ref_key -> timestamp
-
-# Constants for continuous quote detection
-QUOTE_BUFFER_SECONDS = 15
-QUOTE_PHRASE_MIN = 5
-QUOTE_PHRASE_MAX = 20
-QUOTE_DETECTION_INTERVAL = 1.5
-QUOTE_CONFIDENCE_THRESHOLD = 82
-QUOTE_DEDUP_SECONDS = 30
 
 # Connected clients
 active_websockets = set()
 
-# Auto-clear task handle
-auto_clear_task = None
+# Minimum gap between auto-displays (seconds)
+_last_display_time = 0.0
 
 async def set_active_scripture(scripture_data):
-    """Set active scripture and schedule auto-clear."""
-    global auto_clear_task
-
-    # Cancel any existing auto-clear
-    if auto_clear_task is not None:
-        auto_clear_task.cancel()
-        auto_clear_task = None
-
+    """Set active scripture (persistent until replaced)."""
     state["active_scripture"] = scripture_data
 
-    # Track context for semantic search (QV-07)
     if scripture_data is not None and scripture_data.get("book"):
         state["context_book"] = scripture_data["book"]
         state["context_chapter"] = scripture_data.get("chapter")
 
-    # Schedule auto-clear if duration is set
-    duration = state.get("display_duration", 0)
-    if scripture_data is not None and duration > 0:
-        async def auto_clear():
-            await asyncio.sleep(duration)
-            state["active_scripture"] = None
-            await broadcast_state()
-
-        auto_clear_task = asyncio.create_task(auto_clear())
-
     await broadcast_state()
 
 async def clear_active_scripture():
-    """Clear active scripture and cancel auto-clear."""
-    global auto_clear_task
-    if auto_clear_task is not None:
-        auto_clear_task.cancel()
-        auto_clear_task = None
+    """Clear active scripture."""
     state["active_scripture"] = None
     await broadcast_state()
 
@@ -135,8 +102,6 @@ async def _safe_send(message_str):
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
-        except BaseException:
-            dead.add(ws)
     if dead:
         active_websockets.difference_update(dead)
 
@@ -149,13 +114,8 @@ async def broadcast_state():
         "current_translation": state["current_translation"],
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
-        "recent_transcripts": state["recent_transcripts"],
-        "full_transcript": state["full_transcript"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
-        "rolling_buffer_text": _get_recent_buffer_text(),
-        "detected_quotes": state["detected_quotes"],
-        "quote_detection_enabled": state["quote_detection_enabled"],
     })
     await _safe_send(message)
 
@@ -181,131 +141,8 @@ async def _display_candidate(candidate):
     return False
 
 
-async def _merge_candidates(regex_candidates, semantic_candidates):
-    """Merge regex and semantic candidates, deduplicating by reference."""
-    seen = set()
-    merged = []
-    for c in regex_candidates + semantic_candidates:
-        key = f"{c['book']}|{c['chapter']}|{c.get('verse_start')}|{c.get('verse_end')}"
-        if key not in seen:
-            seen.add(key)
-            merged.append(c)
-    merged.sort(key=lambda c: c["confidence"], reverse=True)
-    return merged
-
-
-def _extract_phrases(text):
-    """Extract overlapping 5-20 word phrases from text for semantic matching."""
-    words = text.strip().split()
-    if len(words) < QUOTE_PHRASE_MIN:
-        return []
-    phrases = []
-    seen = set()
-    max_len = min(QUOTE_PHRASE_MAX, len(words))
-    for length in range(QUOTE_PHRASE_MIN, max_len + 1, 5):
-        step = max(1, length // 3)
-        for start in range(0, len(words) - length + 1, step):
-            phrase = " ".join(words[start:start + length])
-            key = " ".join(words[start:start + 3])
-            if key not in seen:
-                seen.add(key)
-                phrases.append(phrase)
-    return phrases[:30]  # Cap at 30 phrases per cycle
-
-
-def _get_recent_buffer_text():
-    """Get combined text from the last QUOTE_BUFFER_SECONDS from rolling_buffer."""
-    now = time.time()
-    cutoff = now - QUOTE_BUFFER_SECONDS
-    recent = [entry["text"] for entry in state["rolling_buffer"] if entry["timestamp"] >= cutoff]
-    return " ".join(recent).strip()
-
-
-def _is_recently_detected(ref_key):
-    """Check if a verse ref was detected recently (within dedup window)."""
-    now = time.time()
-    # Clean stale entries
-    stale = [k for k, v in _recent_quote_refs.items() if now - v > QUOTE_DEDUP_SECONDS]
-    for k in stale:
-        del _recent_quote_refs[k]
-    if ref_key in _recent_quote_refs:
-        return True
-    _recent_quote_refs[ref_key] = now
-    return False
-
-
-async def _quote_detection_loop():
-    """Background loop: every 1.5s, extract phrases from rolling buffer and match against Bible verses."""
-    loop = asyncio.get_running_loop()
-    while True:
-        try:
-            await asyncio.sleep(QUOTE_DETECTION_INTERVAL)
-
-            # Always broadcast current state (rolling buffer, detected quotes) at this interval
-            await broadcast_state()
-
-            if not state.get("quote_detection_enabled", True):
-                continue
-
-            text = _get_recent_buffer_text()
-            if not text or len(text.split()) < QUOTE_PHRASE_MIN:
-                continue
-            phrases = _extract_phrases(text)
-            if not phrases:
-                continue
-            for phrase in phrases:
-                # Yield control so WebSocket messages aren't starved
-                await asyncio.sleep(0)
-                try:
-                    candidates = await loop.run_in_executor(
-                        None, functools.partial(
-                            search_similar_verses,
-                            phrase,
-                            translation=state["current_translation"],
-                            context_book=state.get("context_book"),
-                            context_chapter=state.get("context_chapter"),
-                            top_k=1
-                        )
-                    )
-                except Exception:
-                    continue
-                for c in candidates:
-                    if c["confidence"] >= QUOTE_CONFIDENCE_THRESHOLD:
-                        ref_key = f"{c['book']}|{c['chapter']}|{c['verse_start']}"
-                        if _is_recently_detected(ref_key):
-                            continue
-                        await _display_candidate(c)
-                        quote_entry = {
-                            "phrase": phrase,
-                            "reference": f"{c['book']} {c['chapter']}:{c['verse_start']}",
-                            "confidence": c["confidence"],
-                            "book": c["book"],
-                            "chapter": c["chapter"],
-                            "verse_start": c["verse_start"],
-                            "verse_end": c["verse_end"],
-                            "text": c.get("text", ""),
-                            "type": "semantic",
-                            "timestamp": time.time()
-                        }
-                        state["detected_quotes"].insert(0, quote_entry)
-                        if len(state["detected_quotes"]) > 15:
-                            state["detected_quotes"].pop()
-                        # Broadcast the new quote to all clients
-                        quote_msg = json.dumps({
-                            "type": "quote_detected",
-                            "quote": quote_entry
-                        })
-                        if active_websockets:
-                            await _safe_send(quote_msg)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            # Log and continue — never let this loop die unexpectedly
-            pass
-
-
 # Helper to process transcript text and detect verses
-async def process_transcript(text: str, is_final: bool = False, broadcast_to_clients: bool = False):
+async def process_transcript(text: str, is_final: bool = False):
     # Add to transcript history
     state["recent_transcripts"].append({"text": text, "is_final": is_final})
     if len(state["recent_transcripts"]) > 10:
@@ -321,46 +158,40 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
         else:
             state["full_transcript"] = text
 
-    # Update rolling buffer for continuous quote detection (only final)
-    if is_final:
-        now = time.time()
-        state["rolling_buffer"].append({"text": text, "timestamp": now})
-        # Prune entries older than QUOTE_BUFFER_SECONDS
-        cutoff = now - QUOTE_BUFFER_SECONDS
-        state["rolling_buffer"] = [
-            entry for entry in state["rolling_buffer"]
-            if entry["timestamp"] >= cutoff
-        ]
-    
-    # Broadcast transcript to WebSocket clients (for backend ASR or non-browser sources)
-    if broadcast_to_clients and is_final and active_websockets:
-        transcript_msg = json.dumps({
-            "type": "transcript",
-            "text": text,
-            "is_final": True
-        })
-        await _safe_send(transcript_msg)
-    
-    # Only run detection on final transcripts
+        # Broadcast transcript to all connected clients (only backend ASR, not browser echo)
+        if active_websockets:
+            transcript_msg = json.dumps({
+                "type": "transcript",
+                "text": text,
+                "is_final": True
+            })
+            await _safe_send(transcript_msg)
+
     if not is_final:
         return
 
-    # Step 1: Parse with regex for explicit references
-    regex_candidates = parse_text_for_verses(text)
+    # Parse with regex for explicit references
+    candidates = parse_text_for_verses(text)
 
-    # Step 2: Run semantic search for quotes without references (QV-01, QV-02, QV-03)
+    # Semantic search for implied quotes (always runs alongside regex)
     semantic_candidates = []
-    if not regex_candidates or might_be_quote(text):
+    if HAS_SEMANTIC:
+        top_k = 3 if candidates else 5
         semantic_candidates = search_similar_verses(
             text,
             translation=state["current_translation"],
             context_book=state.get("context_book"),
             context_chapter=state.get("context_chapter"),
-            top_k=3 if regex_candidates else 5
+            top_k=top_k
         )
+    seen = {f"{c['book']}{c.get('chapter')}{c.get('verse_start')}" for c in candidates}
+    for sc in semantic_candidates:
+        key = f"{sc['book']}{sc.get('chapter')}{sc.get('verse_start')}"
+        if key not in seen:
+            candidates.append(sc)
 
-    # Step 3: Merge all candidates
-    candidates = await _merge_candidates(regex_candidates, semantic_candidates)
+    # Sort all candidates by confidence descending
+    candidates.sort(key=lambda c: c.get("confidence", 0), reverse=True)
 
     if candidates:
         # Broadcast candidates to the operator dashboard
@@ -370,16 +201,24 @@ async def process_transcript(text: str, is_final: bool = False, broadcast_to_cli
         })
         if active_websockets:
             await _safe_send(candidates_msg)
-        
-        # QV-05: Auto-select highest >90% confidence, or show top 2-3
-        high_conf = [c for c in candidates if c["confidence"] >= 90]
-        if high_conf:
-            # Auto-display the highest-confidence match
-            await _display_candidate(high_conf[0])
+
+        # Auto-display verse references with high confidence
+        global _last_display_time
+        now = time.time()
+        if now - _last_display_time >= 3.0:
+            for c in candidates:
+                if c.get("type") != "semantic" and c["confidence"] >= 90:
+                    _last_display_time = now
+                    await _display_candidate(c)
+                    break
 
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    user = get_current_user_from_ws(websocket)
+    if not user:
+        await websocket.close(code=4001)
+        return
     await websocket.accept()
     active_websockets.add(websocket)
     
@@ -390,15 +229,11 @@ async def websocket_endpoint(websocket: WebSocket):
             "current_translation": state["current_translation"],
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
-            "recent_transcripts": state["recent_transcripts"],
             "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
-            "rolling_buffer_text": _get_recent_buffer_text(),
-            "detected_quotes": state.get("detected_quotes", []),
-            "quote_detection_enabled": state.get("quote_detection_enabled", True),
         }))
-    except BaseException:
+    except Exception:
         active_websockets.discard(websocket)
         return
     
@@ -421,9 +256,8 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "set_duration":
                 state["display_duration"] = int(msg.get("duration", 15))
                 await broadcast_state()
-                
+
             elif msg_type == "manual_verse":
-                # Manual trigger by entering a reference like "John 3:16"
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
                 if candidates:
@@ -442,7 +276,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "reference": scripture["reference"],
                                 "text": scripture["combined_text"]
                             }))
-                        except BaseException:
+                        except Exception:
                             pass
                         
             elif msg_type == "manual_override":
@@ -450,10 +284,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
                 })
-                
-            elif msg_type == "toggle_quote_detection":
-                state["quote_detection_enabled"] = msg.get("enabled", True)
-                await broadcast_state()
 
             elif msg_type == "transcript":
                 speech_text = msg.get("text", "")
@@ -464,32 +294,114 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print("WebSocket error:", e)
         active_websockets.discard(websocket)
-    except BaseException:
-        active_websockets.discard(websocket)
 
-# HTML endpoints to serve frontend files directly for easy local opening
+# Frontend directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
+HTML_CACHE = {}
+
+def _read_html(name):
+    path = os.path.join(FRONTEND_DIR, name)
+    if path in HTML_CACHE:
+        return HTML_CACHE[path]
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        HTML_CACHE[path] = content
+        return content
+    return None
+
 @app.get("/")
-async def get_dashboard():
-    dashboard_path = os.path.join(FRONTEND_DIR, "dashboard.html")
-    if os.path.exists(dashboard_path):
-        return FileResponse(dashboard_path)
-    return HTMLResponse("Dashboard HTML file not found.", status_code=404)
+async def get_landing():
+    html = _read_html("index.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Landing page not found.", status_code=404)
+
+@app.get("/login")
+async def get_login():
+    html = _read_html("login.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Login page not found.", status_code=404)
+
+@app.get("/register")
+async def get_register():
+    html = _read_html("register.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Register page not found.", status_code=404)
+
+@app.get("/app")
+async def get_dashboard(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    html = _read_html("dashboard.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Dashboard not found.", status_code=404)
 
 @app.get("/screen")
-async def get_screen():
-    screen_path = os.path.join(FRONTEND_DIR, "screen.html")
-    if os.path.exists(screen_path):
-        return FileResponse(screen_path)
-    return HTMLResponse("Screen HTML file not found.", status_code=404)
+async def get_screen(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    html = _read_html("screen.html")
+    if html:
+        return HTMLResponse(html)
+    return HTMLResponse("Screen not found.", status_code=404)
 
 # API endpoint for verse preview (used by dashboard candidate cards)
 @app.get("/api/verse")
 async def api_verse_preview(book: str, chapter: int, verse: int = None):
     scripture = get_scripture(state["current_translation"], book, chapter, verse)
     return scripture
+
+@app.get("/api/token")
+async def get_assemblyai_token():
+    try:
+        api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+        response = requests.get(
+            "https://streaming.assemblyai.com/v3/token?expires_in_seconds=600",
+            headers={"Authorization": api_key}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=f"Failed to fetch token from AssemblyAI: {response.text}")
+        return response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/transcribe")
+async def api_transcribe(file: UploadFile = File(...)):
+    """Transcribe an audio file using AssemblyAI API."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    suffix = os.path.splitext(file.filename or ".wav")[1] or ".wav"
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+            tmp = f.name
+            content = await file.read()
+            f.write(content)
+
+        transcriber = aai.Transcriber()
+        config = aai.TranscriptionConfig(
+            speech_models=["universal-3-pro", "universal-2"]
+        )
+        transcript = transcriber.transcribe(tmp, config=config)
+        
+        if transcript.status == aai.TranscriptStatus.error:
+            raise Exception(transcript.error)
+            
+        return {"text": transcript.text, "language": "en"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.unlink(tmp)
 
 # Mount frontend files (css, js, images) at /frontend
 if os.path.exists(FRONTEND_DIR):
