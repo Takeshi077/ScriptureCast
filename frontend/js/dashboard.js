@@ -12,7 +12,6 @@ const connDot         = document.getElementById('conn-dot');
 const connLabel       = document.getElementById('conn-label');
 const connIndicator   = document.getElementById('connection-indicator');
 const translationSel  = document.getElementById('translation-select');
-const durationInput   = document.getElementById('duration-input');
 const clearBtn        = document.getElementById('clear-btn');
 const transcriptFeed  = document.getElementById('transcript-feed');
 const micLiveLabel    = document.getElementById('mic-live-label');
@@ -25,10 +24,6 @@ const lookupTextPrev  = document.getElementById('lookup-text-preview');
 const displayStatus   = document.getElementById('display-status');
 const previewRef      = document.getElementById('preview-reference');
 const previewText     = document.getElementById('preview-text');
-const countdownWrap   = document.getElementById('countdown-wrap');
-const countdownLabel  = document.getElementById('countdown-label');
-const countdownTimer  = document.getElementById('countdown-timer');
-const countdownFill   = document.getElementById('countdown-bar-fill');
 const micToggleBtn    = document.getElementById('mic-toggle-btn');
 
 // Fallback text input DOM
@@ -38,9 +33,6 @@ const textSendBtn     = document.getElementById('text-send-btn');
 
 // ── State ──────────────────────────────────────────────────
 let socket = null;
-let countdownInterval = null;
-let countdownRemaining = 0;
-let displayDuration = 15;
 let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
@@ -383,21 +375,12 @@ micToggleBtn.addEventListener('click', toggleRecording);
 
 // ── State Update Handler ───────────────────────────────────
 function handleStateUpdate(state) {
-    // Sync translation selector
     if (state.current_translation) {
         translationSel.value = state.current_translation;
     }
 
-    // Sync display duration
-    if (state.display_duration !== undefined) {
-        displayDuration = state.display_duration;
-        durationInput.value = displayDuration;
-    }
+    updateProjectorPreview(state.active_scripture);
 
-    // Update projector preview
-    updateProjectorPreview(state.active_scripture, state.display_duration);
-
-    // Load full transcript from server on initial connect
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
         if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
@@ -405,7 +388,6 @@ function handleStateUpdate(state) {
         }
         updateTranscriptDisplay();
     }
-
 }
 
 // ── Transcript Handler ─────────────────────────────────────
@@ -545,62 +527,24 @@ function handleManualVerseResult(msg) {
 }
 
 // ── Projector Preview Update ───────────────────────────────
-function updateProjectorPreview(activeScripture, duration) {
-    clearCountdown();
-
+function updateProjectorPreview(activeScripture) {
     if (activeScripture) {
         previewRef.textContent = activeScripture.reference;
         previewText.textContent = `"${activeScripture.text}"`;
 
         displayStatus.className = 'status-badge status-on';
         displayStatus.innerHTML = '<span class="status-dot"></span> Live';
-
-        // Start countdown if duration set
-        if (duration && duration > 0) {
-            startCountdown(duration);
-        }
     } else {
         previewRef.textContent = '—';
         previewText.textContent = 'Nothing on display';
         displayStatus.className = 'status-badge status-inactive';
         displayStatus.innerHTML = '<span class="status-dot"></span> Off';
-        countdownFill.style.width = '0%';
-        countdownTimer.textContent = '—';
-    }
-}
-
-function startCountdown(seconds) {
-    countdownRemaining = seconds;
-    countdownFill.style.width = '100%';
-    countdownTimer.textContent = seconds;
-
-    countdownInterval = setInterval(() => {
-        countdownRemaining--;
-        const pct = Math.max(0, (countdownRemaining / seconds) * 100);
-        countdownFill.style.width = `${pct}%`;
-        countdownTimer.textContent = countdownRemaining > 0 ? countdownRemaining : '—';
-
-        if (countdownRemaining <= 0) clearCountdown();
-    }, 1000);
-}
-
-function clearCountdown() {
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
     }
 }
 
 // ── Header Controls ────────────────────────────────────────
 translationSel.addEventListener('change', () => {
     send({ type: 'set_translation', translation: translationSel.value });
-});
-
-durationInput.addEventListener('change', () => {
-    const val = parseInt(durationInput.value, 10);
-    if (!isNaN(val) && val >= 0) {
-        send({ type: 'set_duration', duration: val });
-    }
 });
 
 clearBtn.addEventListener('click', () => {

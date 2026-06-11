@@ -27,7 +27,7 @@ function connect() {
 
         if (msg.type === 'state') {
             _lastState = msg;
-            updateDisplay(msg.active_scripture, msg.display_duration);
+            updateDisplay(msg.active_scripture);
         }
     };
 
@@ -45,7 +45,7 @@ function connect() {
     };
 }
 
-function updateDisplay(activeScripture, durationSeconds) {
+function updateDisplay(activeScripture) {
     if (displayTimeout) {
         clearTimeout(displayTimeout);
         displayTimeout = null;
@@ -65,12 +65,6 @@ function updateDisplay(activeScripture, durationSeconds) {
     requestAnimationFrame(() => {
         container.classList.add('visible');
     });
-
-    if (durationSeconds && durationSeconds > 0) {
-        displayTimeout = setTimeout(() => {
-            hideDisplay();
-        }, durationSeconds * 1000);
-    }
 }
 
 function hideDisplay() {
