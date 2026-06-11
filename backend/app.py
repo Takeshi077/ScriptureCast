@@ -86,6 +86,7 @@ async def _reload_active_scripture():
         await set_active_scripture({
             "reference": scripture["reference"],
             "text": scripture["combined_text"],
+            "verses": scripture["verses"],
             "book": cur["book"],
             "chapter": cur["chapter"],
             "verse_start": cur.get("verse_start"),
@@ -132,6 +133,7 @@ async def _display_candidate(candidate):
         await set_active_scripture({
             "reference": scripture["reference"],
             "text": scripture["combined_text"],
+            "verses": scripture["verses"],
             "book": candidate["book"],
             "chapter": candidate["chapter"],
             "verse_start": candidate["verse_start"],
@@ -274,7 +276,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             await websocket.send_text(json.dumps({
                                 "type": "manual_verse_result",
                                 "reference": scripture["reference"],
-                                "text": scripture["combined_text"]
+                                "text": scripture["combined_text"],
+                                "verses": scripture["verses"]
                             }))
                         except Exception:
                             pass
@@ -355,8 +358,8 @@ async def get_screen(request: Request):
 
 # API endpoint for verse preview (used by dashboard candidate cards)
 @app.get("/api/verse")
-async def api_verse_preview(book: str, chapter: int, verse: int = None):
-    scripture = get_scripture(state["current_translation"], book, chapter, verse)
+async def api_verse_preview(book: str, chapter: int, verse: int = None, verse_end: int = None):
+    scripture = get_scripture(state["current_translation"], book, chapter, verse, verse_end)
     return scripture
 
 @app.get("/api/token")

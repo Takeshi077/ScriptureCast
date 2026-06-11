@@ -58,7 +58,37 @@ function updateDisplay(activeScripture) {
     }
 
     referenceEl.textContent = activeScripture.reference || '';
-    textEl.textContent = `"${activeScripture.text}"`;
+    
+    textEl.innerHTML = '';
+    if (activeScripture.verses && activeScripture.verses.length > 0) {
+        activeScripture.verses.forEach(v => {
+            const verseDiv = document.createElement('div');
+            verseDiv.className = 'verse-block';
+            
+            const numSup = document.createElement('sup');
+            numSup.className = 'verse-num';
+            numSup.textContent = v.verse;
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'verse-text';
+            textSpan.textContent = v.text;
+            
+            verseDiv.appendChild(numSup);
+            verseDiv.appendChild(document.createTextNode(' '));
+            verseDiv.appendChild(textSpan);
+            textEl.appendChild(verseDiv);
+        });
+    } else {
+        const verseDiv = document.createElement('div');
+        verseDiv.className = 'verse-block';
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'verse-text';
+        textSpan.textContent = activeScripture.text;
+        
+        verseDiv.appendChild(textSpan);
+        textEl.appendChild(verseDiv);
+    }
     textEl.scrollTop = 0;
 
     container.classList.remove('hidden');

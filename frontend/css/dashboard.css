@@ -852,3 +852,34 @@ input[type="number"] { width: 70px; text-align: center; }
     color: var(--warning);
     background: rgba(251, 191, 36, 0.1);
 }
+
+/* Inline Verse Numbers & Verse Spacing */
+.verse-block {
+    margin-bottom: 8px;
+}
+.verse-block:last-child {
+    margin-bottom: 0;
+}
+.verse-num {
+    font-size: 0.7em;
+    vertical-align: super;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-right: 4px;
+    opacity: 0.8;
+}
+.verse-span {
+    display: inline;
+}
+.verse-num-preview {
+    font-size: 0.75em;
+    vertical-align: super;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-right: 2px;
+    margin-left: 4px;
+    opacity: 0.8;
+}
+.verse-num-preview:first-child {
+    margin-left: 0;
+}
