@@ -23,7 +23,6 @@
             <h1 class="auth-title">Welcome back</h1>
             <p class="auth-subtitle">Sign in to your account</p>
             <form id="login-form" class="auth-form">
-                <div id="auth-error" class="auth-error hidden"></div>
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input id="email" type="email" placeholder="you@church.org" required autocomplete="email">
@@ -32,6 +31,7 @@
                     <label for="password">Password</label>
                     <input id="password" type="password" placeholder="Enter your password" required autocomplete="current-password">
                 </div>
+                <div id="auth-error" class="auth-error hidden"></div>
                 <button type="submit" class="auth-btn" id="login-btn">Sign In</button>
             </form>
             <p class="auth-alt">Don't have an account? <a href="/register">Create one</a></p>
