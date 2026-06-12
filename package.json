@@ -1,0 +1,23 @@
+{
+  "name": "scripturecast",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "tauri": "tauri",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Takeshi077/ScriptureCast.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Takeshi077/ScriptureCast/issues"
+  },
+  "homepage": "https://github.com/Takeshi077/ScriptureCast#readme",
+  "devDependencies": {
+    "@tauri-apps/
