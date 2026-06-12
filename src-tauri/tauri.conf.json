@@ -1,18 +1,21 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "scripturecast-tauri",
+  "productName": "ScriptureCast",
   "version": "0.1.0",
-  "identifier": "com.user.scripturecast-tauri",
+  "identifier": "com.scripturecast.app",
   "build": {
-    "frontendDist": "../src"
+    "devUrl": "http://localhost:8000",
+    "frontendDist": "../frontend"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "scripturecast-tauri",
-        "width": 800,
-        "height": 600
+        "title": "ScriptureCast",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
       }
     ],
     "security": {
