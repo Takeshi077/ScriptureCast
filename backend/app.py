@@ -262,6 +262,11 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "manual_verse":
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
+
+                ref = verse_text
+                text = "Could not parse scripture reference."
+                verses = []
+
                 if candidates:
                     await _display_candidate(candidates[0])
                     scripture = get_scripture(
@@ -272,15 +277,21 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidates[0]["verse_end"]
                     )
                     if "error" not in scripture and scripture["verses"]:
-                        try:
-                            await websocket.send_text(json.dumps({
-                                "type": "manual_verse_result",
-                                "reference": scripture["reference"],
-                                "text": scripture["combined_text"],
-                                "verses": scripture["verses"]
-                            }))
-                        except Exception:
-                            pass
+                        ref = scripture["reference"]
+                        text = scripture["combined_text"]
+                        verses = scripture["verses"]
+                    else:
+                        text = "Scripture reference not found."
+
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "manual_verse_result",
+                        "reference": ref,
+                        "text": text,
+                        "verses": verses
+                    }))
+                except Exception:
+                    pass
                         
             elif msg_type == "manual_override":
                 await set_active_scripture({
