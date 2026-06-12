@@ -20,4 +20,6 @@
   },
   "homepage": "https://github.com/Takeshi077/ScriptureCast#readme",
   "devDependencies": {
-    "@tauri-apps/
+    "@tauri-apps/cli": "^2.11.2"
+  }
+}
