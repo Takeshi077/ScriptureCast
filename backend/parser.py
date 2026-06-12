@@ -87,7 +87,7 @@ BOOK_PATTERN = r'\b(?:' + '|'.join(map(re.escape, SORTED_BOOK_KEYS)) + r')\b'
 REF_REGEX = re.compile(
     r'\b(' + BOOK_PATTERN + r')'                                                    # Book name
     r'(?:\s+(?:chapter|chap\.?)\s+|\s+)?(\d+)'                                    # Chapter number
-    r'(?:(?:\s*(?::|,?\s+verse|,?\s+verses|,?\s+v\.?|\s+)\s*)(\d+)(?:\s*(?:-|to)\s*(\d+))?)?', # Verse(s)
+    r'(?:(?:\s*(?::|,?\s+verse|,?\s+verses|,?\s+vs\.?|,?\s+v\.?|\s+)\s*)(\d+)(?:\s*(?:-|to)\s*(\d+))?)?', # Verse(s)
     re.IGNORECASE
 )
 
