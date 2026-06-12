@@ -3,7 +3,7 @@ import re
 # Refined map of book abbreviations to prevent common word false positives
 BOOK_ABBREVIATIONS = {
     # Old Testament
-    "genesis": "Genesis", "gen": "Genesis", "ge": "Genesis", "gn": "Genesis",
+    "genesis": "Genesis", "gen": "Genesis", "ge": "Genesis", "gn": "Genesis", "gensis": "Genesis",
     "exodus": "Exodus", "exo": "Exodus", "exod": "Exodus",
     "leviticus": "Leviticus", "lev": "Leviticus",
     "numbers": "Numbers", "num": "Numbers", "nm": "Numbers", "nbr": "Numbers",
