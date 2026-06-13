@@ -4,10 +4,7 @@ websockets
 sounddevice
 numpy
 scipy
-scikit-learn
 joblib
-faster-whisper
-sentence-transformers
 python-multipart
 assemblyai
 requests
