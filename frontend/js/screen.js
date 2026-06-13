@@ -18,7 +18,6 @@ let _reconnectTimer = null;
 let _lastState = null;
 let currentVerseIndex = 0;
 let _activeScripture = null;
-let _prevScriptureRef = null;
 
 function send(obj) {
     if (socket && socket.readyState === WebSocket.OPEN) {
