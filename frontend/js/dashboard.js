@@ -2,10 +2,10 @@
  * ScriptureCast — Operator Dashboard JavaScript
  * Handles WebSocket communication, state management, and all UI interactions.
  */
-
-// ── Configuration ──────────────────────────────────────────
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
+const WS_URL = (window.__TAURI__ !== undefined)
+    ? 'wss://scripturecast.onrender.com/ws' 
+    : `${wsProtocol}//${window.location.host}/ws`;
 
 // ── Tauri Detection ──────────────────────────────────────
 function isTauri() {

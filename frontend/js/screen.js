@@ -1,5 +1,8 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
+const isTauri = window.__TAURI__ !== undefined;
+const WS_URL = isTauri 
+    ? 'wss://scripturecast.onrender.com/ws' 
+    : `${wsProtocol}//${window.location.host}/ws`;
 
 const container = document.getElementById('display-container');
 const referenceEl = document.getElementById('reference');
