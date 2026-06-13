@@ -15,6 +15,15 @@
     <div id="display-container" class="hidden">
         <div id="reference"></div>
         <div id="scripture-text"></div>
+        <div id="screen-navigation" class="hidden">
+            <button id="screen-prev-btn" class="screen-nav-btn" aria-label="Previous verse">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span id="screen-verse-position"></span>
+            <button id="screen-next-btn" class="screen-nav-btn" aria-label="Next verse">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+        </div>
     </div>
     <script src="/frontend/js/screen.js?v=3"></script>
 </body>
