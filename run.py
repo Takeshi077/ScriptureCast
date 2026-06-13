@@ -15,7 +15,7 @@ import threading
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HOST = "0.0.0.0"
-PORT = int(os.environ.get("PORT", 8000))
+PORT = int(os.environ.get("PORT", 10000))
 
 def free_port(host, port):
     """Kill any process currently bound to the given port (cross-platform)."""

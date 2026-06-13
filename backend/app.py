@@ -11,22 +11,15 @@ from .parser import parse_text_for_verses
 from .database import get_scripture
 from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
 
-# Semantic search (optional — requires torch/scikit-learn)
-try:
-    from .semantic import ensure_embeddings, search_similar_verses
-    HAS_SEMANTIC = True
-except ImportError:
-    HAS_SEMANTIC = False
-    def ensure_embeddings():
-        pass
-    def search_similar_verses(text, translation="KJV", context_book=None, context_chapter=None, top_k=3):
-        return []
+HAS_SEMANTIC = False
+def ensure_embeddings(): pass
+def search_similar_verses(*args, **kwargs): return []
 
 import assemblyai as aai
 import requests
 
 # Configure AssemblyAI API key
-aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -376,7 +369,7 @@ async def api_verse_preview(book: str, chapter: int, verse: int = None, verse_en
 @app.get("/api/token")
 async def get_assemblyai_token():
     try:
-        api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+        api_key = os.environ.get("ASSEMBLYAI_API_KEY")
         response = requests.get(
             "https://streaming.assemblyai.com/v3/token?expires_in_seconds=600",
             headers={"Authorization": api_key}
