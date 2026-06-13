@@ -11,3 +11,6 @@ sentence-transformers
 python-multipart
 assemblyai
 requests
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
