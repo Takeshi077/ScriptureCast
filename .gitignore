@@ -23,3 +23,14 @@ Thumbs.db
 
 # Environment
 .env
+
+# Tauri
+src-tauri/gen/
+src-tauri/target/
+
+# Whisper model files (downloaded by user or via app)
+ggml-*.bin
+**/models/ggml-*.bin
+
+# Tauri sidecar binaries (platform-specific, built separately)
+src-tauri/binaries/whisper-cli-*
