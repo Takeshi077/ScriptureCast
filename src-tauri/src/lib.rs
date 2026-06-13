@@ -29,7 +29,7 @@ fn get_models_dir(app: &tauri::AppHandle) -> PathBuf {
 }
 
 #[tauri::command]
-async fn check_whisper(app: tauri::AppHandle, state: tauri::State<'_, WhisperState>) -> WhisperStatus {
+async fn check_whisper(app: tauri::AppHandle, state: tauri::State<'_, WhisperState>) -> Result<WhisperStatus, String> {
     let model_path = state
         .model_path
         .lock()
@@ -45,12 +45,12 @@ async fn check_whisper(app: tauri::AppHandle, state: tauri::State<'_, WhisperSta
         .map(|_| true)
         .unwrap_or(false);
 
-    WhisperStatus {
+    Ok(WhisperStatus {
         available: sidecar_exists && model_exists,
         model_exists,
         model_path: Some(model_path.to_string_lossy().to_string()),
         sidecar_exists,
-    }
+    })
 }
 
 #[tauri::command]
@@ -155,9 +155,11 @@ async fn transcribe_audio(
 }
 
 fn get_server_url(app: &tauri::AppHandle) -> String {
-    app.env()
-        .app_config()
-        .and_then(|c| c.build.as_ref()?.dev_url.as_ref().map(|u| u.to_string()))
+    app.config()
+        .build
+        .dev_url
+        .as_ref()
+        .map(|u| u.to_string())
         .or_else(|| std::env::var("SCRIPTURECAST_URL").ok())
         .unwrap_or_else(|| "http://localhost:8000".into())
 }
@@ -177,7 +179,7 @@ pub fn run() {
         })
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                let url_str = get_server_url(app);
+                let url_str = get_server_url(app.handle());
                 if let Ok(url) = tauri::Url::parse(&url_str) {
                     let _ = window.navigate(url);
                 }
