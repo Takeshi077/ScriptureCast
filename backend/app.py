@@ -11,22 +11,15 @@ from .parser import parse_text_for_verses
 from .database import get_scripture
 from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
 
-# Semantic search (optional — requires torch/scikit-learn)
-try:
-    from .semantic import ensure_embeddings, search_similar_verses
-    HAS_SEMANTIC = True
-except ImportError:
-    HAS_SEMANTIC = False
-    def ensure_embeddings():
-        pass
-    def search_similar_verses(text, translation="KJV", context_book=None, context_chapter=None, top_k=3):
-        return []
+HAS_SEMANTIC = False
+def ensure_embeddings(): pass
+def search_similar_verses(*args, **kwargs): return []
 
 import assemblyai as aai
 import requests
 
 # Configure AssemblyAI API key
-aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+aai.settings.api_key = os.environ.get("ASSEMBLYAI_API_KEY")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,6 +42,7 @@ state = {
     "full_transcript": "",      # Continuous accumulation of all transcript text
     "context_book": None,       # Last displayed book (for semantic context awareness)
     "context_chapter": None,    # Last displayed chapter
+    "current_verse_index": 0,   # For verse-by-verse navigation
 }
 
 # Connected clients
@@ -60,6 +54,7 @@ _last_display_time = 0.0
 async def set_active_scripture(scripture_data):
     """Set active scripture (persistent until replaced)."""
     state["active_scripture"] = scripture_data
+    state["current_verse_index"] = 0
 
     if scripture_data is not None and scripture_data.get("book"):
         state["context_book"] = scripture_data["book"]
@@ -117,6 +112,7 @@ async def broadcast_state():
         "active_scripture": state["active_scripture"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
+        "current_verse_index": state["current_verse_index"],
     })
     await _safe_send(message)
 
@@ -234,6 +230,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
+            "current_verse_index": state["current_verse_index"],
         }))
     except Exception:
         active_websockets.discard(websocket)
@@ -262,6 +259,11 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "manual_verse":
                 verse_text = msg.get("verse_text", "")
                 candidates = parse_text_for_verses(verse_text)
+
+                ref = verse_text
+                text = "Could not parse scripture reference."
+                verses = []
+
                 if candidates:
                     await _display_candidate(candidates[0])
                     scripture = get_scripture(
@@ -272,21 +274,33 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidates[0]["verse_end"]
                     )
                     if "error" not in scripture and scripture["verses"]:
-                        try:
-                            await websocket.send_text(json.dumps({
-                                "type": "manual_verse_result",
-                                "reference": scripture["reference"],
-                                "text": scripture["combined_text"],
-                                "verses": scripture["verses"]
-                            }))
-                        except Exception:
-                            pass
+                        ref = scripture["reference"]
+                        text = scripture["combined_text"]
+                        verses = scripture["verses"]
+                    else:
+                        text = "Scripture reference not found."
+
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "manual_verse_result",
+                        "reference": ref,
+                        "text": text,
+                        "verses": verses
+                    }))
+                except Exception:
+                    pass
                         
             elif msg_type == "manual_override":
                 await set_active_scripture({
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
                 })
+
+            elif msg_type == "verse_navigate":
+                state["current_verse_index"] = msg.get("verse_index", 0)
+                if state["current_verse_index"] < 0:
+                    state["current_verse_index"] = 0
+                await broadcast_state()
 
             elif msg_type == "transcript":
                 speech_text = msg.get("text", "")
@@ -365,7 +379,7 @@ async def api_verse_preview(book: str, chapter: int, verse: int = None, verse_en
 @app.get("/api/token")
 async def get_assemblyai_token():
     try:
-        api_key = os.environ.get("ASSEMBLYAI_API_KEY", "6a43fbd351cc4b42a4ea4135f34b5fab")
+        api_key = os.environ.get("ASSEMBLYAI_API_KEY")
         response = requests.get(
             "https://streaming.assemblyai.com/v3/token?expires_in_seconds=600",
             headers={"Authorization": api_key}
