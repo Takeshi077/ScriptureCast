@@ -1,7 +1,7 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const isTauri = window.__TAURI__ !== undefined;
-const WS_URL = isTauri 
-    ? 'wss://scripturecast.onrender.com/ws' 
+const WS_URL = isTauri
+    ? 'wss://scripturecast.onrender.com/ws'
     : `${wsProtocol}//${window.location.host}/ws`;
 
 const container = document.getElementById('display-container');
@@ -61,21 +61,21 @@ function updateDisplay(activeScripture) {
     }
 
     referenceEl.textContent = activeScripture.reference || '';
-    
+
     textEl.innerHTML = '';
     if (activeScripture.verses && activeScripture.verses.length > 0) {
         activeScripture.verses.forEach(v => {
             const verseDiv = document.createElement('div');
             verseDiv.className = 'verse-block';
-            
+
             const numSup = document.createElement('sup');
             numSup.className = 'verse-num';
             numSup.textContent = v.verse;
-            
+
             const textSpan = document.createElement('span');
             textSpan.className = 'verse-text';
             textSpan.textContent = v.text;
-            
+
             verseDiv.appendChild(numSup);
             verseDiv.appendChild(document.createTextNode(' '));
             verseDiv.appendChild(textSpan);
@@ -84,11 +84,11 @@ function updateDisplay(activeScripture) {
     } else {
         const verseDiv = document.createElement('div');
         verseDiv.className = 'verse-block';
-        
+
         const textSpan = document.createElement('span');
         textSpan.className = 'verse-text';
         textSpan.textContent = activeScripture.text;
-        
+
         verseDiv.appendChild(textSpan);
         textEl.appendChild(verseDiv);
     }
