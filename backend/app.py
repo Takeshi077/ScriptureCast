@@ -42,6 +42,7 @@ state = {
     "full_transcript": "",      # Continuous accumulation of all transcript text
     "context_book": None,       # Last displayed book (for semantic context awareness)
     "context_chapter": None,    # Last displayed chapter
+    "current_verse_index": 0,   # For verse-by-verse navigation
 }
 
 # Connected clients
@@ -53,6 +54,7 @@ _last_display_time = 0.0
 async def set_active_scripture(scripture_data):
     """Set active scripture (persistent until replaced)."""
     state["active_scripture"] = scripture_data
+    state["current_verse_index"] = 0
 
     if scripture_data is not None and scripture_data.get("book"):
         state["context_book"] = scripture_data["book"]
@@ -110,6 +112,7 @@ async def broadcast_state():
         "active_scripture": state["active_scripture"],
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
+        "current_verse_index": state["current_verse_index"],
     })
     await _safe_send(message)
 
@@ -227,6 +230,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
+            "current_verse_index": state["current_verse_index"],
         }))
     except Exception:
         active_websockets.discard(websocket)
@@ -291,6 +295,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
                 })
+
+            elif msg_type == "verse_navigate":
+                state["current_verse_index"] = msg.get("verse_index", 0)
+                if state["current_verse_index"] < 0:
+                    state["current_verse_index"] = 0
+                await broadcast_state()
 
             elif msg_type == "transcript":
                 speech_text = msg.get("text", "")

@@ -750,6 +750,58 @@ input[type="number"] { width: 70px; text-align: center; }
     transition: width 1s linear;
 }
 
+/* Verse navigation in preview */
+#dash-verse-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 4px 14px 8px;
+    flex-shrink: 0;
+}
+
+#dash-verse-nav.hidden {
+    display: none;
+}
+
+.dash-nav-btn {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 50%;
+    color: #38bdf8;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.dash-nav-btn:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+}
+
+.dash-nav-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.dash-nav-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+#dash-verse-position {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
 /* Preview actions */
 #preview-actions {
     padding: 0 14px 14px;

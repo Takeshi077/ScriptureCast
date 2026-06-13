@@ -50,6 +50,10 @@ const displayStatus = document.getElementById('display-status');
 const previewRef = document.getElementById('preview-reference');
 const previewText = document.getElementById('preview-text');
 const micToggleBtn = document.getElementById('mic-toggle-btn');
+const dashPrevBtn = document.getElementById('dash-prev-btn');
+const dashNextBtn = document.getElementById('dash-next-btn');
+const dashVersePos = document.getElementById('dash-verse-position');
+const dashNavEl = document.getElementById('dash-verse-nav');
 
 // Fallback text input DOM
 const textInputArea = document.getElementById('text-input-area');
@@ -62,6 +66,8 @@ let currentCandidates = [];
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
+let currentVerseIndex = 0;
+let _activeScripture = null;
 
 
 // ── WebSocket ──────────────────────────────────────────────
@@ -588,6 +594,8 @@ function handleStateUpdate(state) {
         translationSel.value = state.current_translation;
     }
 
+    _activeScripture = state.active_scripture;
+    currentVerseIndex = state.current_verse_index ?? 0;
     updateProjectorPreview(state.active_scripture);
 
     if (state.full_transcript && !fullTranscript && !interimText) {
@@ -787,23 +795,60 @@ function handleManualVerseResult(msg) {
 
 // ── Projector Preview Update ───────────────────────────────
 function updateProjectorPreview(activeScripture) {
-    if (activeScripture) {
-        previewRef.textContent = activeScripture.reference;
+    if (!activeScripture) {
+        previewRef.textContent = '—';
+        previewText.textContent = 'Nothing on display';
+        displayStatus.className = 'status-badge status-inactive';
+        displayStatus.innerHTML = '<span class="status-dot"></span> Off';
+        dashNavEl.classList.add('hidden');
+        return;
+    }
+
+    displayStatus.className = 'status-badge status-on';
+    displayStatus.innerHTML = '<span class="status-dot"></span> Live';
+
+    const verses = activeScripture.verses;
+    const hasMultiple = verses && verses.length > 1;
+
+    if (hasMultiple && currentVerseIndex >= verses.length) {
+        currentVerseIndex = 0;
+    }
+
+    if (hasMultiple) {
+        const v = verses[currentVerseIndex];
+        previewRef.textContent = `${activeScripture.book} ${activeScripture.chapter}:${v.verse}`;
 
         previewText.innerHTML = '';
-        if (activeScripture.verses && activeScripture.verses.length > 0) {
-            activeScripture.verses.forEach(v => {
+        const verseDiv = document.createElement('div');
+        verseDiv.className = 'verse-block';
+        const numSup = document.createElement('sup');
+        numSup.className = 'verse-num';
+        numSup.textContent = v.verse;
+        const textSpan = document.createElement('span');
+        textSpan.className = 'verse-text';
+        textSpan.textContent = v.text;
+        verseDiv.appendChild(numSup);
+        verseDiv.appendChild(document.createTextNode(' '));
+        verseDiv.appendChild(textSpan);
+        previewText.appendChild(verseDiv);
+
+        dashVersePos.textContent = `Verse ${currentVerseIndex + 1} of ${verses.length}`;
+        dashPrevBtn.disabled = currentVerseIndex === 0;
+        dashNextBtn.disabled = currentVerseIndex === verses.length - 1;
+        dashNavEl.classList.remove('hidden');
+    } else {
+        previewRef.textContent = activeScripture.reference;
+        previewText.innerHTML = '';
+        if (verses && verses.length > 0) {
+            verses.forEach(v => {
                 const verseDiv = document.createElement('div');
                 verseDiv.className = 'verse-block';
-
                 const numSup = document.createElement('sup');
                 numSup.className = 'verse-num';
                 numSup.textContent = v.verse;
-
                 const textSpan = document.createElement('span');
                 textSpan.className = 'verse-text';
                 textSpan.textContent = v.text;
-
                 verseDiv.appendChild(numSup);
                 verseDiv.appendChild(document.createTextNode(' '));
                 verseDiv.appendChild(textSpan);
@@ -812,24 +857,40 @@ function updateProjectorPreview(activeScripture) {
         } else {
             const verseDiv = document.createElement('div');
             verseDiv.className = 'verse-block';
-
             const textSpan = document.createElement('span');
             textSpan.className = 'verse-text';
             textSpan.textContent = activeScripture.text;
-
             verseDiv.appendChild(textSpan);
             previewText.appendChild(verseDiv);
         }
-
-        displayStatus.className = 'status-badge status-on';
-        displayStatus.innerHTML = '<span class="status-dot"></span> Live';
-    } else {
-        previewRef.textContent = '—';
-        previewText.textContent = 'Nothing on display';
-        displayStatus.className = 'status-badge status-inactive';
-        displayStatus.innerHTML = '<span class="status-dot"></span> Off';
+        dashNavEl.classList.add('hidden');
     }
 }
+
+// ── Verse Navigation ────────────────────────────────────────
+function goToPrevVerse() {
+    const verses = _activeScripture?.verses;
+    if (!verses || verses.length <= 1 || currentVerseIndex <= 0) return;
+    currentVerseIndex--;
+    send({ type: 'verse_navigate', verse_index: currentVerseIndex });
+    updateProjectorPreview(_activeScripture);
+}
+
+function goToNextVerse() {
+    const verses = _activeScripture?.verses;
+    if (!verses || verses.length <= 1 || currentVerseIndex >= verses.length - 1) return;
+    currentVerseIndex++;
+    send({ type: 'verse_navigate', verse_index: currentVerseIndex });
+    updateProjectorPreview(_activeScripture);
+}
+
+dashPrevBtn.addEventListener('click', goToPrevVerse);
+dashNextBtn.addEventListener('click', goToNextVerse);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') { goToPrevVerse(); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { goToNextVerse(); e.preventDefault(); }
+});
 
 // ── Header Controls ────────────────────────────────────────
 translationSel.addEventListener('change', () => {
