@@ -33,26 +33,30 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router)
 
-# Global State
-state = {
+# ── Per-User State ──────────────────────────────────────────────
+user_states = {}
+user_websockets = {}
+user_last_display = {}
+
+DEFAULT_STATE = {
     "current_translation": "KJV",
     "display_duration": 15,
-    "active_scripture": None,  # Will hold {"reference": "...", "text": "...", "book": "...", "chapter": N, "verse_start": N, "verse_end": N} or None
-    "recent_transcripts": [],   # List of {"text": "...", "is_final": bool}
-    "full_transcript": "",      # Continuous accumulation of all transcript text
-    "context_book": None,       # Last displayed book (for semantic context awareness)
-    "context_chapter": None,    # Last displayed chapter
-    "current_verse_index": 0,   # For verse-by-verse navigation
+    "active_scripture": None,
+    "recent_transcripts": [],
+    "full_transcript": "",
+    "context_book": None,
+    "context_chapter": None,
+    "current_verse_index": 0,
 }
 
-# Connected clients
-active_websockets = set()
+def get_state(user_id):
+    if user_id not in user_states:
+        user_states[user_id] = dict(DEFAULT_STATE)
+    return user_states[user_id]
 
-# Minimum gap between auto-displays (seconds)
-_last_display_time = 0.0
 
-async def set_active_scripture(scripture_data):
-    """Set active scripture (persistent until replaced)."""
+async def set_active_scripture(scripture_data, user_id):
+    state = get_state(user_id)
     state["active_scripture"] = scripture_data
     state["current_verse_index"] = 0
 
@@ -60,15 +64,15 @@ async def set_active_scripture(scripture_data):
         state["context_book"] = scripture_data["book"]
         state["context_chapter"] = scripture_data.get("chapter")
 
-    await broadcast_state()
+    await broadcast_state(user_id)
 
-async def clear_active_scripture():
-    """Clear active scripture."""
+async def clear_active_scripture(user_id):
+    state = get_state(user_id)
     state["active_scripture"] = None
-    await broadcast_state()
+    await broadcast_state(user_id)
 
-async def _reload_active_scripture():
-    """Re-fetch the active scripture in the current translation."""
+async def _reload_active_scripture(user_id):
+    state = get_state(user_id)
     cur = state["active_scripture"]
     if cur is None or not cur.get("book"):
         return
@@ -86,25 +90,27 @@ async def _reload_active_scripture():
             "chapter": cur["chapter"],
             "verse_start": cur.get("verse_start"),
             "verse_end": cur.get("verse_end")
-        })
+        }, user_id)
     else:
-        await clear_active_scripture()
+        await clear_active_scripture(user_id)
 
-async def _safe_send(message_str):
-    """Send a message to all connected websockets, removing dead connections."""
+async def _safe_send(message_str, user_id):
+    """Send a message to all websockets for a given user, removing dead connections."""
+    if user_id not in user_websockets:
+        return
     dead = set()
-    for ws in list(active_websockets):
+    for ws in list(user_websockets[user_id]):
         try:
             await ws.send_text(message_str)
         except Exception:
             dead.add(ws)
     if dead:
-        active_websockets.difference_update(dead)
+        user_websockets[user_id].difference_update(dead)
 
-# Helper to broadcast state to all clients
-async def broadcast_state():
-    if not active_websockets:
+async def broadcast_state(user_id):
+    if user_id not in user_websockets or not user_websockets[user_id]:
         return
+    state = get_state(user_id)
     message = json.dumps({
         "type": "state",
         "current_translation": state["current_translation"],
@@ -114,10 +120,10 @@ async def broadcast_state():
         "context_chapter": state.get("context_chapter"),
         "current_verse_index": state["current_verse_index"],
     })
-    await _safe_send(message)
+    await _safe_send(message, user_id)
 
-async def _display_candidate(candidate):
-    """Look up full verse text and display it."""
+async def _display_candidate(candidate, user_id):
+    state = get_state(user_id)
     scripture = get_scripture(
         state["current_translation"],
         candidate["book"],
@@ -134,19 +140,18 @@ async def _display_candidate(candidate):
             "chapter": candidate["chapter"],
             "verse_start": candidate["verse_start"],
             "verse_end": candidate["verse_end"]
-        })
+        }, user_id)
         return True
     return False
 
 
-# Helper to process transcript text and detect verses
-async def process_transcript(text: str, is_final: bool = False):
-    # Add to transcript history
+async def process_transcript(text: str, is_final: bool, user_id: int):
+    state = get_state(user_id)
+
     state["recent_transcripts"].append({"text": text, "is_final": is_final})
     if len(state["recent_transcripts"]) > 10:
         state["recent_transcripts"].pop(0)
 
-    # Accumulate into full transcript (like a long note)
     if is_final:
         MAX_NOTE_LENGTH = 10000
         if state["full_transcript"]:
@@ -156,22 +161,19 @@ async def process_transcript(text: str, is_final: bool = False):
         else:
             state["full_transcript"] = text
 
-        # Broadcast transcript to all connected clients (only backend ASR, not browser echo)
-        if active_websockets:
+        if user_id in user_websockets and user_websockets[user_id]:
             transcript_msg = json.dumps({
                 "type": "transcript",
                 "text": text,
                 "is_final": True
             })
-            await _safe_send(transcript_msg)
+            await _safe_send(transcript_msg, user_id)
 
     if not is_final:
         return
 
-    # Parse with regex for explicit references
     candidates = parse_text_for_verses(text)
 
-    # Semantic search for implied quotes (always runs alongside regex)
     semantic_candidates = []
     if HAS_SEMANTIC:
         top_k = 3 if candidates else 5
@@ -188,39 +190,42 @@ async def process_transcript(text: str, is_final: bool = False):
         if key not in seen:
             candidates.append(sc)
 
-    # Sort all candidates by confidence descending
     candidates.sort(key=lambda c: c.get("confidence", 0), reverse=True)
 
     if candidates:
-        # Broadcast candidates to the operator dashboard
         candidates_msg = json.dumps({
             "type": "candidate_verses",
             "candidates": candidates
         })
-        if active_websockets:
-            await _safe_send(candidates_msg)
+        if user_id in user_websockets and user_websockets[user_id]:
+            await _safe_send(candidates_msg, user_id)
 
-        # Auto-display verse references with high confidence
-        global _last_display_time
+        if user_id not in user_last_display:
+            user_last_display[user_id] = 0.0
         now = time.time()
-        if now - _last_display_time >= 3.0:
+        if now - user_last_display[user_id] >= 3.0:
             for c in candidates:
                 if c.get("type") != "semantic" and c["confidence"] >= 90:
-                    _last_display_time = now
-                    await _display_candidate(c)
+                    user_last_display[user_id] = now
+                    await _display_candidate(c, user_id)
                     break
 
-# WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     user = get_current_user_from_ws(websocket)
     if not user:
         await websocket.close(code=4001)
         return
+
+    user_id = user["id"]
     await websocket.accept()
-    active_websockets.add(websocket)
-    
-    # Send initial state immediately
+
+    if user_id not in user_websockets:
+        user_websockets[user_id] = set()
+    user_websockets[user_id].add(websocket)
+
+    state = get_state(user_id)
+
     try:
         await websocket.send_text(json.dumps({
             "type": "state",
@@ -233,28 +238,28 @@ async def websocket_endpoint(websocket: WebSocket):
             "current_verse_index": state["current_verse_index"],
         }))
     except Exception:
-        active_websockets.discard(websocket)
+        user_websockets[user_id].discard(websocket)
         return
-    
+
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
-            
             msg_type = msg.get("type")
+
             if msg_type == "clear":
-                await clear_active_scripture()
-                
+                await clear_active_scripture(user_id)
+
             elif msg_type == "set_translation":
                 state["current_translation"] = msg.get("translation", "KJV")
                 if state["active_scripture"]:
-                    await _reload_active_scripture()
+                    await _reload_active_scripture(user_id)
                 else:
-                    await broadcast_state()
-                
+                    await broadcast_state(user_id)
+
             elif msg_type == "set_duration":
                 state["display_duration"] = int(msg.get("duration", 15))
-                await broadcast_state()
+                await broadcast_state(user_id)
 
             elif msg_type == "manual_verse":
                 verse_text = msg.get("verse_text", "")
@@ -265,7 +270,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 verses = []
 
                 if candidates:
-                    await _display_candidate(candidates[0])
+                    await _display_candidate(candidates[0], user_id)
                     scripture = get_scripture(
                         state["current_translation"],
                         candidates[0]["book"],
@@ -289,28 +294,30 @@ async def websocket_endpoint(websocket: WebSocket):
                     }))
                 except Exception:
                     pass
-                        
+
             elif msg_type == "manual_override":
                 await set_active_scripture({
                     "reference": msg.get("reference", ""),
                     "text": msg.get("text", "")
-                })
+                }, user_id)
 
             elif msg_type == "verse_navigate":
                 state["current_verse_index"] = msg.get("verse_index", 0)
                 if state["current_verse_index"] < 0:
                     state["current_verse_index"] = 0
-                await broadcast_state()
+                await broadcast_state(user_id)
 
             elif msg_type == "transcript":
                 speech_text = msg.get("text", "")
-                await process_transcript(speech_text, is_final=True)
-                
+                await process_transcript(speech_text, is_final=True, user_id=user_id)
+
     except WebSocketDisconnect:
-        active_websockets.discard(websocket)
+        if user_id in user_websockets:
+            user_websockets[user_id].discard(websocket)
     except Exception as e:
         print("WebSocket error:", e)
-        active_websockets.discard(websocket)
+        if user_id in user_websockets:
+            user_websockets[user_id].discard(websocket)
 
 # Frontend directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -370,10 +377,13 @@ async def get_screen(request: Request):
         return HTMLResponse(html)
     return HTMLResponse("Screen not found.", status_code=404)
 
-# API endpoint for verse preview (used by dashboard candidate cards)
 @app.get("/api/verse")
-async def api_verse_preview(book: str, chapter: int, verse: int = None, verse_end: int = None):
-    scripture = get_scripture(state["current_translation"], book, chapter, verse, verse_end)
+async def api_verse_preview(request: Request, book: str, chapter: int, verse: int = None, verse_end: int = None):
+    user = get_current_user(request)
+    translation = "KJV"
+    if user:
+        translation = get_state(user["id"])["current_translation"]
+    scripture = get_scripture(translation, book, chapter, verse, verse_end)
     return scripture
 
 @app.get("/api/token")
