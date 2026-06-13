@@ -71,7 +71,9 @@ function connect() {
     }
 
     setConnectionStatus('connecting');
-    socket = new WebSocket(WS_URL);
+    const token = localStorage.getItem('token');
+    const urlWithToken = token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
+    socket = new WebSocket(urlWithToken);
 
     socket.onopen = () => {
         setConnectionStatus('connected');

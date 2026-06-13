@@ -90,6 +90,8 @@ def get_current_user(request: Request) -> dict | None:
 def get_current_user_from_ws(websocket) -> dict | None:
     token = _extract_token(websocket.headers, websocket.cookies)
     if not token:
+        token = websocket.query_params.get("token")
+    if not token:
         return None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
