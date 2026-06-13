@@ -7,6 +7,29 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 
+// ── Tauri Detection ──────────────────────────────────────
+function isTauri() {
+    return !!(window.__TAURI_INTERNALS__);
+}
+
+async function tauriInvoke(cmd, args) {
+    if (!isTauri()) throw new Error('Not in Tauri context');
+    return window.__TAURI__.core.invoke(cmd, args);
+}
+
+let whisperStatus = null;
+
+async function checkWhisperStatus() {
+    if (!isTauri()) return null;
+    try {
+        whisperStatus = await tauriInvoke('check_whisper');
+        return whisperStatus;
+    } catch {
+        whisperStatus = { available: false, sidecar_exists: false, model_exists: false };
+        return whisperStatus;
+    }
+}
+
 // ── DOM References ─────────────────────────────────────────
 const connDot         = document.getElementById('conn-dot');
 const connLabel       = document.getElementById('conn-label');
@@ -150,10 +173,162 @@ function hasSpeechSupport() {
 
 function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
+    if (show && isTauri() && whisperStatus?.available) {
+        micLiveLabel.textContent = 'Local Whisper ●';
+    } else if (show) {
+        micLiveLabel.textContent = 'Live ●';
+    } else {
+        micLiveLabel.textContent = 'Mic';
+    }
 }
 
 function showTextFallback() {
     textInputArea.classList.remove('hidden');
+}
+
+// ── Local Whisper Recording Mode ──────────────────────────
+let isWhisperRecording = false;
+let whisperMediaRecorder = null;
+let whisperAudioChunks = [];
+
+async function startWhisperRecording() {
+    if (isWhisperRecording) return;
+    if (!whisperStatus?.available) {
+        appendStatusMessage('Whisper not available. Check model and sidecar.');
+        return;
+    }
+
+    micToggleBtn.classList.add('connecting');
+    micToggleBtn.title = 'Starting local recording…';
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
+        });
+
+        whisperMediaRecorder = new MediaRecorder(stream, {
+            mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : 'audio/webm'
+        });
+        whisperAudioChunks = [];
+
+        whisperMediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) whisperAudioChunks.push(e.data);
+        };
+
+        whisperMediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(t => t.stop());
+
+            micToggleBtn.classList.add('connecting');
+            micToggleBtn.title = 'Decoding audio…';
+            setLiveLabel(false);
+
+            const blob = new Blob(whisperAudioChunks, { type: 'audio/webm' });
+
+            // Decode WebM/Opus to raw PCM via AudioContext, then encode as WAV
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                audioCtx.close();
+
+                const numChannels = audioBuffer.numberOfChannels;
+                const sampleRate = audioBuffer.sampleRate;
+                const length = audioBuffer.length;
+                const pcmData = new Float32Array(length);
+                const channelData = audioBuffer.getChannelData(0);
+                pcmData.set(channelData);
+
+                const wavBytes = encodeWav(pcmData, sampleRate, numChannels);
+                const base64 = arrayBufferToBase64(wavBytes.buffer);
+
+                micToggleBtn.title = 'Transcribing…';
+                const text = await tauriInvoke('transcribe_audio', {
+                    audioBase64: base64
+                });
+                if (text.trim()) {
+                    fullTranscript += (fullTranscript ? ' ' : '') + text.trim();
+                    if (fullTranscript.length > MAX_NOTE_LENGTH * 2) {
+                        fullTranscript = fullTranscript.slice(-MAX_NOTE_LENGTH);
+                    }
+                    updateTranscriptDisplay();
+                    send({ type: 'transcript', text: text.trim() });
+                }
+            } catch (err) {
+                appendStatusMessage(`Transcription error: ${err}`);
+            }
+
+            micToggleBtn.classList.remove('active', 'connecting', 'speaking');
+            micToggleBtn.title = 'Click to start recording (Local Whisper)';
+        };
+
+        whisperMediaRecorder.start();
+        isWhisperRecording = true;
+        micToggleBtn.classList.remove('connecting');
+        micToggleBtn.classList.add('active');
+        micToggleBtn.title = 'Click to stop recording';
+        setLiveLabel(true);
+        initContinuousNote();
+    } catch (err) {
+        appendStatusMessage(`Microphone error: ${err.message}`);
+        micToggleBtn.classList.remove('active', 'connecting');
+        showTextFallback();
+    }
+}
+
+function stopWhisperRecording() {
+    if (!isWhisperRecording) return;
+    isWhisperRecording = false;
+    if (whisperMediaRecorder && whisperMediaRecorder.state !== 'inactive') {
+        whisperMediaRecorder.stop();
+    }
+    whisperMediaRecorder = null;
+}
+
+function encodeWav(samples, sampleRate, numChannels) {
+    const bitsPerSample = 16;
+    const blockAlign = numChannels * bitsPerSample / 8;
+    const dataSize = samples.length * blockAlign;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    function s(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+    function w(offset, v) { view.setUint16(offset, v, true); }
+    function d(offset, v) { view.setUint32(offset, v, true); }
+
+    s(0, 'RIFF');
+    d(4, 36 + dataSize);
+    s(8, 'WAVE');
+    s(12, 'fmt ');
+    d(16, 16);
+    w(20, 1);
+    w(22, numChannels);
+    d(24, sampleRate);
+    d(28, sampleRate * blockAlign);
+    w(32, blockAlign);
+    w(34, bitsPerSample);
+    s(36, 'data');
+    d(40, dataSize);
+
+    const int16 = new Int16Array(buffer, 44, samples.length);
+    for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+
+    return new Uint8Array(buffer);
+}
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
 }
 
 function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
@@ -197,6 +372,22 @@ function initSpeechRecognition() {
         if (placeholder) placeholder.textContent = 'Audio input is not supported in this browser. Type text below instead.';
         showTextFallback();
         return;
+    }
+
+    if (isTauri()) {
+        checkWhisperStatus().then(status => {
+            if (status?.available) {
+                micToggleBtn.title = 'Click to start recording (Local Whisper)';
+                appendStatusMessage('Local Whisper transcription ready');
+            } else if (status?.sidecar_exists) {
+                micToggleBtn.title = 'Whisper model missing — click to download';
+            } else {
+                // whisper-cli not bundled — fall back to server transcription
+                appendStatusMessage('Local Whisper not available. Using server transcription.');
+            }
+        });
+    } else {
+        micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
     }
     initContinuousNote();
 }
@@ -368,10 +559,19 @@ function stopRecording() {
 }
 
 function toggleRecording() {
-    if (isRecording) {
-        stopRecording();
+    const useWhisper = isTauri() && whisperStatus?.available;
+    if (useWhisper) {
+        if (isWhisperRecording) {
+            stopWhisperRecording();
+        } else {
+            startWhisperRecording();
+        }
     } else {
-        startRecording();
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
     }
 }
 
@@ -701,11 +901,83 @@ function appendStatusMessage(text) {
     transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
+// ── Model Download ──────────────────────────────────────────
+const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
+
+async function downloadWhisperModel() {
+    if (!isTauri()) return;
+    micToggleBtn.disabled = true;
+    micToggleBtn.title = 'Downloading model…';
+    micToggleBtn.classList.add('connecting');
+
+    try {
+        const resp = await fetch(WHISPER_MODEL_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const contentLength = resp.headers.get('content-length');
+        const reader = resp.body.getReader();
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            received += value.length;
+            if (contentLength) {
+                const pct = Math.round((received / parseInt(contentLength)) * 100);
+                micToggleBtn.title = `Downloading model… ${pct}%`;
+            }
+        }
+
+        const allBytes = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+            allBytes.set(chunk, offset);
+            offset += chunk.length;
+        }
+
+        const base64 = arrayBufferToBase64(allBytes.buffer);
+        const path = await tauriInvoke('write_model_file', { dataBase64: base64 });
+        await checkWhisperStatus();
+
+        if (whisperStatus?.available) {
+            micToggleBtn.title = 'Click to start recording (Local Whisper)';
+            appendStatusMessage('Model downloaded. Local Whisper ready!');
+        } else {
+            micToggleBtn.title = 'Model download complete — but whisper not available';
+        }
+    } catch (err) {
+        appendStatusMessage(`Model download failed: ${err.message}`);
+        micToggleBtn.title = 'Download failed — click to retry';
+    } finally {
+        micToggleBtn.disabled = false;
+        micToggleBtn.classList.remove('connecting');
+    }
+}
+
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initContinuousNote();
 initSpeechRecognition();
-if (hasSpeechSupport()) {
+
+if (isTauri()) {
+    checkWhisperStatus().then(status => {
+        if (status?.available) {
+            micToggleBtn.title = 'Click to start recording (Local Whisper)';
+        } else if (status?.sidecar_exists && !status?.model_exists) {
+            micToggleBtn.title = 'Model missing — click to download';
+            // One-click download on mic press
+            const origToggle = toggleRecording;
+            const dlHandler = async () => {
+                micToggleBtn.removeEventListener('click', dlHandler);
+                micToggleBtn.addEventListener('click', origToggle);
+                await downloadWhisperModel();
+            };
+            micToggleBtn.removeEventListener('click', toggleRecording);
+            micToggleBtn.addEventListener('click', dlHandler);
+        }
+    });
+} else if (hasSpeechSupport()) {
     micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
 }
 
