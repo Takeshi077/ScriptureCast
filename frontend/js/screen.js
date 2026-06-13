@@ -185,6 +185,8 @@ prevBtn.addEventListener('click', goToPrevVerse);
 nextBtn.addEventListener('click', goToNextVerse);
 
 document.addEventListener('keydown', (e) => {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 'ArrowLeft') { goToPrevVerse(); e.preventDefault(); }
     else if (e.key === 'ArrowRight') { goToNextVerse(); e.preventDefault(); }
 });
