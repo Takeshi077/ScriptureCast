@@ -4,7 +4,7 @@
  */
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = (window.__TAURI__ !== undefined)
-    ? 'wss://scripturecast.onrender.com/ws' 
+    ? 'wss://scripturecast.onrender.com/ws'
     : `${wsProtocol}//${window.location.host}/ws`;
 
 // ── Tauri Detection ──────────────────────────────────────
@@ -31,28 +31,28 @@ async function checkWhisperStatus() {
 }
 
 // ── DOM References ─────────────────────────────────────────
-const connDot         = document.getElementById('conn-dot');
-const connLabel       = document.getElementById('conn-label');
-const connIndicator   = document.getElementById('connection-indicator');
-const translationSel  = document.getElementById('translation-select');
-const clearBtn        = document.getElementById('clear-btn');
-const transcriptFeed  = document.getElementById('transcript-feed');
-const micLiveLabel    = document.getElementById('mic-live-label');
-const candidatesList  = document.getElementById('candidates-list');
-const manualInput     = document.getElementById('manual-input');
+const connDot = document.getElementById('conn-dot');
+const connLabel = document.getElementById('conn-label');
+const connIndicator = document.getElementById('connection-indicator');
+const translationSel = document.getElementById('translation-select');
+const clearBtn = document.getElementById('clear-btn');
+const transcriptFeed = document.getElementById('transcript-feed');
+const micLiveLabel = document.getElementById('mic-live-label');
+const candidatesList = document.getElementById('candidates-list');
+const manualInput = document.getElementById('manual-input');
 const manualLookupBtn = document.getElementById('manual-lookup-btn');
-const lookupPreview   = document.getElementById('lookup-preview');
-const lookupRefLabel  = document.getElementById('lookup-reference-label');
-const lookupTextPrev  = document.getElementById('lookup-text-preview');
-const displayStatus   = document.getElementById('display-status');
-const previewRef      = document.getElementById('preview-reference');
-const previewText     = document.getElementById('preview-text');
-const micToggleBtn    = document.getElementById('mic-toggle-btn');
+const lookupPreview = document.getElementById('lookup-preview');
+const lookupRefLabel = document.getElementById('lookup-reference-label');
+const lookupTextPrev = document.getElementById('lookup-text-preview');
+const displayStatus = document.getElementById('display-status');
+const previewRef = document.getElementById('preview-reference');
+const previewText = document.getElementById('preview-text');
+const micToggleBtn = document.getElementById('mic-toggle-btn');
 
 // Fallback text input DOM
-const textInputArea   = document.getElementById('text-input-area');
-const textInput       = document.getElementById('text-input');
-const textSendBtn     = document.getElementById('text-send-btn');
+const textInputArea = document.getElementById('text-input-area');
+const textInput = document.getElementById('text-input');
+const textSendBtn = document.getElementById('text-send-btn');
 
 // ── State ──────────────────────────────────────────────────
 let socket = null;
@@ -167,8 +167,8 @@ let mediaStream = null;
 let aaiWs = null;
 
 function hasSpeechSupport() {
-    return !!(window.AudioContext || window.webkitAudioContext) && 
-           !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    return !!(window.AudioContext || window.webkitAudioContext) &&
+        !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 function setLiveLabel(show) {
@@ -394,16 +394,16 @@ function initSpeechRecognition() {
 
 async function startRecording() {
     if (isRecording) return;
-    
+
     micToggleBtn.classList.add('connecting');
     micToggleBtn.title = 'Connecting to AssemblyAI...';
-    
+
     // Create AudioContext IMMEDIATELY — before any await, to retain user gesture
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === 'suspended') {
         await audioContext.resume();
     }
-    
+
     try {
         // 1. Get temporary token from backend
         const tokenResp = await fetch('/api/token');
@@ -518,7 +518,7 @@ async function startRecording() {
 
 function stopRecording() {
     if (!isRecording) return;
-    
+
     isRecording = false;
     micToggleBtn.classList.remove('active', 'speaking', 'connecting');
     micLiveLabel.classList.remove('speaking');
@@ -530,21 +530,21 @@ function stopRecording() {
     // Clean up audio context & streams
     if (scriptProcessor) {
         scriptProcessor.onaudioprocess = null;
-        try { scriptProcessor.disconnect(); } catch {}
+        try { scriptProcessor.disconnect(); } catch { }
         scriptProcessor = null;
     }
     if (source) {
-        try { source.disconnect(); } catch {}
+        try { source.disconnect(); } catch { }
         source = null;
     }
     if (mediaStream) {
         try {
             mediaStream.getTracks().forEach(track => track.stop());
-        } catch {}
+        } catch { }
         mediaStream = null;
     }
     if (audioContext) {
-        try { audioContext.close(); } catch {}
+        try { audioContext.close(); } catch { }
         audioContext = null;
     }
 
@@ -652,7 +652,7 @@ function renderCandidates(candidates) {
                     <span class="candidate-confidence ${confClass}">${candidate.confidence}%</span>
                 </span>
             </div>
-            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g,'_')}">${isSemantic && candidate.text ? escHtml('"' + candidate.text + '"') : 'Loading…'}</div>
+            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g, '_')}">${isSemantic && candidate.text ? escHtml('"' + candidate.text + '"') : 'Loading…'}</div>
             <div class="candidate-actions">
                 <button class="btn btn-primary disp-btn" aria-label="Display ${escHtml(refStr)} on projector">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
@@ -719,14 +719,14 @@ async function fetchVersePreview(candidate, el) {
             data.verses.forEach(v => {
                 const verseSpan = document.createElement('span');
                 verseSpan.className = 'verse-span';
-                
+
                 const numSup = document.createElement('sup');
                 numSup.className = 'verse-num-preview';
                 numSup.textContent = v.verse;
-                
+
                 const textSpan = document.createElement('span');
                 textSpan.textContent = v.text + ' ';
-                
+
                 verseSpan.appendChild(numSup);
                 verseSpan.appendChild(textSpan);
                 el.appendChild(verseSpan);
@@ -748,21 +748,21 @@ function displayCandidate(candidate) {
 function handleManualVerseResult(msg) {
     lookupPreview.classList.remove('hidden');
     lookupRefLabel.textContent = msg.reference;
-    
+
     lookupTextPrev.innerHTML = '';
     if (msg.verses && msg.verses.length > 0) {
         msg.verses.forEach(v => {
             const verseDiv = document.createElement('div');
             verseDiv.className = 'verse-block';
-            
+
             const numSup = document.createElement('sup');
             numSup.className = 'verse-num';
             numSup.textContent = v.verse;
-            
+
             const textSpan = document.createElement('span');
             textSpan.className = 'verse-text';
             textSpan.textContent = v.text;
-            
+
             verseDiv.appendChild(numSup);
             verseDiv.appendChild(document.createTextNode(' '));
             verseDiv.appendChild(textSpan);
@@ -771,11 +771,11 @@ function handleManualVerseResult(msg) {
     } else {
         const verseDiv = document.createElement('div');
         verseDiv.className = 'verse-block';
-        
+
         const textSpan = document.createElement('span');
         textSpan.className = 'verse-text';
         textSpan.textContent = msg.text;
-        
+
         verseDiv.appendChild(textSpan);
         lookupTextPrev.appendChild(verseDiv);
     }
@@ -785,21 +785,21 @@ function handleManualVerseResult(msg) {
 function updateProjectorPreview(activeScripture) {
     if (activeScripture) {
         previewRef.textContent = activeScripture.reference;
-        
+
         previewText.innerHTML = '';
         if (activeScripture.verses && activeScripture.verses.length > 0) {
             activeScripture.verses.forEach(v => {
                 const verseDiv = document.createElement('div');
                 verseDiv.className = 'verse-block';
-                
+
                 const numSup = document.createElement('sup');
                 numSup.className = 'verse-num';
                 numSup.textContent = v.verse;
-                
+
                 const textSpan = document.createElement('span');
                 textSpan.className = 'verse-text';
                 textSpan.textContent = v.text;
-                
+
                 verseDiv.appendChild(numSup);
                 verseDiv.appendChild(document.createTextNode(' '));
                 verseDiv.appendChild(textSpan);
@@ -808,11 +808,11 @@ function updateProjectorPreview(activeScripture) {
         } else {
             const verseDiv = document.createElement('div');
             verseDiv.className = 'verse-block';
-            
+
             const textSpan = document.createElement('span');
             textSpan.className = 'verse-text';
             textSpan.textContent = activeScripture.text;
-            
+
             verseDiv.appendChild(textSpan);
             previewText.appendChild(verseDiv);
         }
@@ -842,7 +842,7 @@ if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
-        } catch {}
+        } catch { }
         localStorage.removeItem('token');
         window.location.href = '/';
     });
