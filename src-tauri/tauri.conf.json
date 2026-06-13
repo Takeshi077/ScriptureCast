@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.scripturecast.app",
   "build": {
-    "devUrl": "http://localhost:8000",
+    "devUrl": "https://scripturecast.onrender.com",
     "frontendDist": "../frontend"
   },
   "app": {
