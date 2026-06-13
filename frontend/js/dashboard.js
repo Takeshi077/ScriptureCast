@@ -7,6 +7,8 @@ const WS_URL = (window.__TAURI__ !== undefined)
     ? 'wss://scripturecast.onrender.com/ws'
     : `${wsProtocol}//${window.location.host}/ws`;
 
+const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
+
 // ── Tauri Detection ──────────────────────────────────────
 function isTauri() {
     return !!(window.__TAURI_INTERNALS__);
@@ -408,7 +410,7 @@ async function startRecording() {
 
     try {
         // 1. Get temporary token from backend
-        const tokenResp = await fetch('/api/token');
+        const tokenResp = await fetch(`${BASE_URL}/api/token`);
         if (!tokenResp.ok) {
             throw new Error(`Failed to retrieve token: ${tokenResp.statusText}`);
         }
@@ -707,7 +709,7 @@ async function fetchVersePreview(candidate, el) {
     const chapter = candidate.chapter;
     const verseStart = candidate.verse_start || 1;
     const verseEnd = candidate.verse_end || '';
-    let url = `/api/verse?book=${book}&chapter=${chapter}&verse=${verseStart}`;
+    let url = `${BASE_URL}/api/verse?book=${book}&chapter=${chapter}&verse=${verseStart}`;
     if (verseEnd) {
         url += `&verse_end=${verseEnd}`;
     }
@@ -843,7 +845,7 @@ const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
         } catch { }
         localStorage.removeItem('token');
         window.location.href = '/';
