@@ -4,10 +4,10 @@ websockets
 sounddevice
 numpy
 scipy
-scikit-learn
 joblib
-faster-whisper
-sentence-transformers
 python-multipart
 assemblyai
 requests
+python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
