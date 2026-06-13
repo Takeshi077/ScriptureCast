@@ -5,8 +5,6 @@ services:
     buildCommand: ./start.sh
     startCommand: python run.py
     envVars:
-      - key: PORT
-        value: 8000
       - key: ASSEMBLYAI_API_KEY
         sync: false
       - key: JWT_SECRET
