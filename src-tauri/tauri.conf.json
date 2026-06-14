@@ -5,7 +5,7 @@
   "identifier": "com.scripturecast.app",
   "build": {
     "devUrl": "https://scripturecast.onrender.com",
-    "frontendDist": "https://scripturecast.onrender.com"
+    "frontendDist": "../frontend"
   },
   "app": {
     "withGlobalTauri": true,
