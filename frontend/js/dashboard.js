@@ -74,8 +74,11 @@ let _activeScripture = null;
 let _reconnectTimer = null;
 
 async function getToken() {
-    if (window.__TAURI__) {
-        return await window.__TAURI__.core.invoke('get_auth_token');
+    if (window.__TAURI_INTERNALS__) {
+        try {
+            const token = await window.__TAURI__.core.invoke('get_auth_token');
+            if (token) return token;
+        } catch { /* fall through to localStorage */ }
     }
     return localStorage.getItem('token');
 }

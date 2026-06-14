@@ -45,9 +45,11 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
-        if (window.__TAURI__) {
-          await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
-        }
+        try {
+          if (window.__TAURI_INTERNALS__) {
+            await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+          }
+        } catch (_) { /* Tauri store is optional */ }
         redirect();
       } catch (err) {
         showError(err.message);
@@ -71,9 +73,11 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
-        if (window.__TAURI__) {
-          await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
-        }
+        try {
+          if (window.__TAURI_INTERNALS__) {
+            await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+          }
+        } catch (_) { /* Tauri store is optional */ }
         redirect();
       } catch (err) {
         showError(err.message);
