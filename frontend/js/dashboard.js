@@ -1022,6 +1022,73 @@ async function downloadWhisperModel() {
     }
 }
 
+// ── Projector Screen Management ────────────────────────────
+let projectorWindow = null;
+let projectorCheckInterval = null;
+
+function openProjectorScreen() {
+    if (projectorWindow && !projectorWindow.closed) {
+        projectorWindow.focus();
+        return;
+    }
+
+    try {
+        const popup = window.open('/screen', 'ScriptureCast Projector', 'width=1920,height=1080');
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+            showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+            return;
+        }
+        projectorWindow = popup;
+        updateProjectorButton(true);
+        showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
+
+        if (projectorCheckInterval) clearInterval(projectorCheckInterval);
+        projectorCheckInterval = setInterval(() => {
+            if (projectorWindow && projectorWindow.closed) {
+                projectorWindow = null;
+                clearInterval(projectorCheckInterval);
+                projectorCheckInterval = null;
+                updateProjectorButton(false);
+            }
+        }, 1000);
+    } catch (e) {
+        showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+    }
+}
+
+function updateProjectorButton(isOpen) {
+    const btn = document.getElementById('open-screen-btn');
+    if (!btn) return;
+    if (isOpen) {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg> Projector Open \u2713';
+        btn.className = 'btn btn-success';
+    } else {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg> Open Projector Screen';
+        btn.className = 'btn btn-secondary';
+    }
+}
+
+function showProjectorToast(type, message) {
+    let toast = document.getElementById('projector-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'projector-toast';
+        toast.innerHTML = '<span id="projector-toast-msg"></span><button id="projector-toast-close">&times;</button>';
+        document.body.appendChild(toast);
+
+        document.getElementById('projector-toast-close').addEventListener('click', () => {
+            toast.classList.add('hidden');
+        });
+    }
+
+    toast.className = '';
+    if (type === 'error') toast.classList.add('error');
+    document.getElementById('projector-toast-msg').textContent = message;
+    toast.classList.remove('hidden');
+}
+
+document.getElementById('open-screen-btn').addEventListener('click', openProjectorScreen);
+
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initContinuousNote();
