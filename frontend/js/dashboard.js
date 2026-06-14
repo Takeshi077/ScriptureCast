@@ -926,7 +926,7 @@ const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         try {
-            await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
+            await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
         } catch { }
         localStorage.removeItem('token');
         if (window.__TAURI__) {
