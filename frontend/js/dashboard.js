@@ -74,16 +74,23 @@ let _activeScripture = null;
 let _reconnectTimer = null;
 
 async function getToken() {
+    // localStorage is fastest and set by auth.js on login — check it first
+    const local = localStorage.getItem('token');
+    if (local) return local;
+
+    // Fall back to cookie (set by login response as httponly)
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    if (cookie) return cookie;
+
+    // Last resort: Tauri persistent store (for restarts, etc.)
     if (window.__TAURI__) {
         try {
-            const token = await window.__TAURI__.core.invoke('get_auth_token');
-            if (token) return token;
+            return await window.__TAURI__.core.invoke('get_auth_token');
         } catch(e) {
-            console.log('Tauri store failed, falling back to localStorage');
+            console.log('Tauri store failed', e);
         }
     }
-    return localStorage.getItem('token') ||
-            document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    return null;
 }
 
 async function connect() {

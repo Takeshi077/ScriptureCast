@@ -30,16 +30,20 @@ function send(obj) {
 }
 
 async function getToken() {
+    const local = localStorage.getItem('token');
+    if (local) return local;
+
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    if (cookie) return cookie;
+
     if (isTauri()) {
         try {
-            const token = await window.__TAURI__.core.invoke('get_auth_token');
-            if (token) return token;
+            return await window.__TAURI__.core.invoke('get_auth_token');
         } catch(e) {
-            console.log('Tauri store failed, falling back to localStorage');
+            console.log('Tauri store failed', e);
         }
     }
-    return localStorage.getItem('token') ||
-            document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    return null;
 }
 
 async function connect() {
