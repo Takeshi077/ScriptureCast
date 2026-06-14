@@ -206,8 +206,7 @@ pub fn run() {
         })
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                let url_str = get_server_url(app.handle());
-                if let Ok(url) = tauri::Url::parse(&url_str) {
+                if let Ok(url) = tauri::Url::parse("https://scripturecast.onrender.com") {
                     let _ = window.navigate(url);
                 }
             }
