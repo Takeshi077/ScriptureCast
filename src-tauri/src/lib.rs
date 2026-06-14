@@ -204,6 +204,15 @@ pub fn run() {
         .manage(WhisperState {
             model_path: Mutex::new(None),
         })
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                let url_str = get_server_url(app.handle());
+                if let Ok(url) = tauri::Url::parse(&url_str) {
+                    let _ = window.navigate(url);
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             check_whisper,
             set_whisper_model_path,
