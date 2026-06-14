@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_store::StoreExt;
 
 const MODEL_FILENAME: &str = "ggml-base.bin";
 
@@ -169,11 +170,37 @@ async fn get_server_url_cmd(app: tauri::AppHandle) -> String {
     get_server_url(&app)
 }
 
+#[tauri::command]
+async fn set_auth_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store.set("token", serde_json::Value::String(token));
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_auth_token(app: tauri::AppHandle) -> Result<String, String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store
+        .get("token")
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .ok_or_else(|| "No token found".into())
+}
+
+#[tauri::command]
+async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store.delete("token");
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .manage(WhisperState {
             model_path: Mutex::new(None),
         })
@@ -192,6 +219,9 @@ pub fn run() {
             write_model_file,
             transcribe_audio,
             get_server_url_cmd,
+            set_auth_token,
+            get_auth_token,
+            remove_auth_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

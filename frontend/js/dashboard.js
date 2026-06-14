@@ -73,13 +73,25 @@ let _activeScripture = null;
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
 
-function connect() {
+async function getToken() {
+    if (window.__TAURI__) {
+        return await window.__TAURI__.core.invoke('get_auth_token');
+    }
+    return localStorage.getItem('token');
+}
+
+async function connect() {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         return;
     }
 
     setConnectionStatus('connecting');
-    const token = localStorage.getItem('token');
+    let token;
+    try {
+        token = await getToken();
+    } catch {
+        token = null;
+    }
     const urlWithToken = token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
     socket = new WebSocket(urlWithToken);
 
@@ -911,6 +923,9 @@ if (logoutBtn) {
             await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
         } catch { }
         localStorage.removeItem('token');
+        if (window.__TAURI__) {
+            try { await window.__TAURI__.core.invoke('remove_auth_token'); } catch { }
+        }
         window.location.href = '/';
     });
 }

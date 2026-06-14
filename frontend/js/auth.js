@@ -45,6 +45,9 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
+        if (window.__TAURI__) {
+          await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+        }
         redirect();
       } catch (err) {
         showError(err.message);
@@ -68,6 +71,9 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
+        if (window.__TAURI__) {
+          await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+        }
         redirect();
       } catch (err) {
         showError(err.message);
