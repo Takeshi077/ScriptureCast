@@ -2,6 +2,21 @@
  * ScriptureCast — Operator Dashboard JavaScript
  * Handles WebSocket communication, state management, and all UI interactions.
  */
+(function() {
+    const errDiv = document.createElement('div');
+    errDiv.id = 'js-error-banner';
+    errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:12px;font-size:14px;z-index:99999;font-family:monospace;display:none';
+    document.body.prepend(errDiv);
+    window.addEventListener('error', function(e) {
+        errDiv.textContent = 'JS Error: ' + (e.message || e.error || 'unknown');
+        errDiv.style.display = 'block';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+        errDiv.textContent = 'Unhandled Promise: ' + (e.reason || 'unknown');
+        errDiv.style.display = 'block';
+    });
+})();
+
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = (window.__TAURI__ !== undefined)
     ? 'wss://scripturecast.onrender.com/ws'
