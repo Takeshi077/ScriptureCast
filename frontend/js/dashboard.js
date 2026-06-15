@@ -25,9 +25,9 @@ const WS_URL = (window.__TAURI__ !== undefined)
 const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
 
 // ── Tauri Detection ──────────────────────────────────────
-function isTauri() {
+var isTauri = window.isTauri || function() {
     return !!(window.__TAURI_INTERNALS__);
-}
+};
 
 async function tauriInvoke(cmd, args) {
     if (!isTauri()) throw new Error('Not in Tauri context');

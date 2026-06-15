@@ -1,8 +1,8 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-function isTauri() {
+var isTauri = window.isTauri || function() {
     return !!(window.__TAURI_INTERNALS__);
-}
+};
 
 const WS_URL = isTauri()
     ? 'wss://scripturecast.onrender.com/ws'
