@@ -15,6 +15,15 @@ HAS_SEMANTIC = False
 def ensure_embeddings(): pass
 def search_similar_verses(*args, **kwargs): return []
 
+try:
+    from . import semantic as _semantic
+    if _semantic._HAS_DEPS:
+        HAS_SEMANTIC = True
+        ensure_embeddings = _semantic.ensure_embeddings
+        search_similar_verses = _semantic.search_similar_verses
+except (ImportError, AttributeError):
+    pass
+
 import assemblyai as aai
 import requests
 

@@ -5,6 +5,7 @@ sounddevice
 numpy
 scipy
 joblib
+scikit-learn
 python-multipart
 assemblyai
 requests

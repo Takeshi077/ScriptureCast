@@ -1,9 +1,27 @@
 use serde::Serialize;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
+
+struct SemanticServer {
+    process: Mutex<Option<Child>>,
+    port: Mutex<Option<u16>>,
+}
+
+impl Drop for SemanticServer {
+    fn drop(&mut self) {
+        if let Ok(mut p) = self.process.lock() {
+            if let Some(ref mut child) = *p {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+}
 
 const MODEL_FILENAME: &str = "ggml-base.bin";
 
@@ -195,6 +213,75 @@ async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn start_semantic_server(app: tauri::AppHandle, state: tauri::State<'_, SemanticServer>) -> Result<u16, String> {
+    {
+        let mut port = state.port.lock().unwrap();
+        if let Some(p) = *port {
+            return Ok(p);
+        }
+    }
+
+    let backend_dir = app.path().resource_dir()
+        .map_err(|e| format!("Resource dir: {}", e))?
+        .join("backend");
+    let script = backend_dir.join("semantic_server.py");
+
+    let script = if script.exists() {
+        script
+    } else {
+        // fallback: relative to CWD (dev mode)
+        let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+        cwd.join("backend").join("semantic_server.py")
+    };
+
+    if !script.exists() {
+        return Err("semantic_server.py not found".into());
+    }
+
+    for python_cmd in &["python3", "python"] {
+        if Command::new(python_cmd).arg("--version").output().is_err() {
+            continue;
+        }
+
+        let mut child = Command::new(python_cmd)
+            .arg(&script)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Spawn: {}", e))?;
+
+        if let Some(stdout) = child.stdout.take() {
+            let reader = BufReader::new(stdout);
+            if let Some(Ok(line)) = reader.lines().next() {
+                if let Some(port_str) = line.trim().strip_prefix("SEMANTIC_READY:") {
+                    if let Ok(port) = port_str.parse::<u16>() {
+                        *state.port.lock().unwrap() = Some(port);
+                        *state.process.lock().unwrap() = Some(child);
+                        return Ok(port);
+                    }
+                }
+            }
+        }
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    Err("Failed to start semantic server (install Python + scikit-learn)".into())
+}
+
+#[tauri::command]
+async fn stop_semantic_server(state: tauri::State<'_, SemanticServer>) -> Result<(), String> {
+    let mut proc = state.process.lock().map_err(|e| e.to_string())?;
+    if let Some(ref mut child) = *proc {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    *proc = None;
+    *state.port.lock().map_err(|e| e.to_string())? = None;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -203,6 +290,10 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(WhisperState {
             model_path: Mutex::new(None),
+        })
+        .manage(SemanticServer {
+            process: Mutex::new(None),
+            port: Mutex::new(None),
         })
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
@@ -221,6 +312,8 @@ pub fn run() {
             set_auth_token,
             get_auth_token,
             remove_auth_token,
+            start_semantic_server,
+            stop_semantic_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
