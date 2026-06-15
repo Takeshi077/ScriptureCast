@@ -1,6 +1,6 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-var isTauri = window.isTauri || function() {
+var isTauri = function() {
     return !!(window.__TAURI_INTERNALS__);
 };
 
