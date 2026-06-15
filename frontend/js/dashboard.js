@@ -1057,6 +1057,74 @@ async function downloadWhisperModel() {
     }
 }
 
+// ── Display / Projector Detection ──────────────────────────
+async function getDisplays() {
+    if (window.__TAURI_INTERNALS__) {
+        try {
+            return await tauriInvoke('get_displays');
+        } catch { return []; }
+    }
+    if (window.screen.isExtended && navigator.getScreenDetails) {
+        try {
+            const d = await navigator.getScreenDetails();
+            return d.screens.map(s => ({
+                name: s.label,
+                x: s.availLeft,
+                y: s.availTop,
+                width: s.availWidth,
+                height: s.availHeight,
+                is_primary: s.isPrimary,
+            }));
+        } catch { }
+    }
+    return [{
+        name: 'Primary display',
+        x: screenLeft || 0,
+        y: screenTop || 0,
+        width: screen.availWidth,
+        height: screen.availHeight,
+        is_primary: true,
+    }];
+}
+
+let displayWatchInterval = null;
+
+function startDisplayWatch() {
+    if (window.__TAURI_INTERNALS__) {
+        let known = 0;
+        displayWatchInterval = setInterval(async () => {
+            try {
+                const list = await tauriInvoke('get_displays');
+                if (known === 0) { known = list.length; return; }
+                if (list.length > known) {
+                    known = list.length;
+                    const ext = list.find(d => !d.is_primary);
+                    showProjectorToast('info',
+                        `Display detected${ext ? `: "${ext.name || 'HDMI projector'}"` : ''}. ` +
+                        'Click "Open Projector Screen" to use it.');
+                }
+            } catch { }
+        }, 3000);
+        return;
+    }
+    if (navigator.getScreenDetails) {
+        navigator.getScreenDetails().then(d => {
+            let known = d.screens.length;
+            d.onscreenschange = () => {
+                if (d.screens.length > known) {
+                    known = d.screens.length;
+                    showProjectorToast('info',
+                        'New display detected. Click "Open Projector Screen" to use it.');
+                }
+            };
+        }).catch(() => { });
+    }
+    if (window.screen.isExtended) {
+        showProjectorToast('info',
+            'Multiple displays detected. Click "Open Projector Screen" for the projector.');
+    }
+}
+
 // ── Projector Screen Management ────────────────────────────
 let projectorWindow = null;
 let projectorCheckInterval = null;
@@ -1067,28 +1135,42 @@ function openProjectorScreen() {
         return;
     }
 
-    try {
-        const popup = window.open('/screen', 'ScriptureCast Projector', 'width=1920,height=1080');
-        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-            showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
-            return;
-        }
-        projectorWindow = popup;
-        updateProjectorButton(true);
-        showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
+    getDisplays().then(displays => {
+        const secondary = displays.find(d => !d.is_primary) || displays[0];
+        const w = secondary.width || 1920;
+        const h = secondary.height || 1080;
+        const left = secondary.x;
+        const top = secondary.y;
 
-        if (projectorCheckInterval) clearInterval(projectorCheckInterval);
-        projectorCheckInterval = setInterval(() => {
-            if (projectorWindow && projectorWindow.closed) {
-                projectorWindow = null;
-                clearInterval(projectorCheckInterval);
-                projectorCheckInterval = null;
-                updateProjectorButton(false);
+        const features = `width=${w},height=${h},left=${left},top=${top}`;
+
+        try {
+            const popup = window.open('/screen', 'ScriptureCast Projector', features);
+            if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+                return;
             }
-        }, 1000);
-    } catch (e) {
-        showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
-    }
+            projectorWindow = popup;
+            updateProjectorButton(true);
+            if (secondary && !secondary.is_primary) {
+                showProjectorToast('success', `Projector opened on "${secondary.name || 'secondary display'}" (${w}x${h})`);
+            } else {
+                showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
+            }
+
+            if (projectorCheckInterval) clearInterval(projectorCheckInterval);
+            projectorCheckInterval = setInterval(() => {
+                if (projectorWindow && projectorWindow.closed) {
+                    projectorWindow = null;
+                    clearInterval(projectorCheckInterval);
+                    projectorCheckInterval = null;
+                    updateProjectorButton(false);
+                }
+            }, 1000);
+        } catch (e) {
+            showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+        }
+    });
 }
 
 function updateProjectorButton(isOpen) {
@@ -1123,6 +1205,8 @@ function showProjectorToast(type, message) {
 }
 
 document.getElementById('open-screen-btn').addEventListener('click', openProjectorScreen);
+
+startDisplayWatch();
 
 // ── Boot ───────────────────────────────────────────────────
 connect();

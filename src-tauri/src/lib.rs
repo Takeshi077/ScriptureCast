@@ -186,6 +186,43 @@ async fn transcribe_audio(
     }
 }
 
+#[derive(Serialize)]
+struct DisplayInfo {
+    name: Option<String>,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+#[tauri::command]
+async fn get_displays(app: tauri::AppHandle) -> Result<Vec<DisplayInfo>, String> {
+    let primary = app.primary_monitor().map_err(|e| e.to_string())?;
+    let all = app.available_monitors().map_err(|e| e.to_string())?;
+    Ok(all
+        .into_iter()
+        .map(|m| {
+            let pos = m.position();
+            let size = m.size();
+            let is_primary = primary.as_ref().map_or(false, |p| {
+                p.position().x == pos.x
+                    && p.position().y == pos.y
+                    && p.size().width == size.width
+                    && p.size().height == size.height
+            });
+            DisplayInfo {
+                name: m.name().map(|s| s.to_string()),
+                x: pos.x,
+                y: pos.y,
+                width: size.width,
+                height: size.height,
+                is_primary,
+            }
+        })
+        .collect())
+}
+
 fn get_server_url(app: &tauri::AppHandle) -> String {
     app.config()
         .build
@@ -327,6 +364,7 @@ pub fn run() {
             remove_auth_token,
             start_semantic_server,
             stop_semantic_server,
+            get_displays,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
