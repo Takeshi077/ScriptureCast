@@ -1,10 +1,6 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-var isTauri = function() {
-    return !!(window.__TAURI_INTERNALS__);
-};
-
-const WS_URL = isTauri()
+const WS_URL = !!(window.__TAURI_INTERNALS__)
     ? 'wss://scripturecast.onrender.com/ws'
     : `${wsProtocol}//${window.location.host}/ws`;
 
@@ -36,7 +32,7 @@ async function getToken() {
     const cookie = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
     if (cookie) return cookie;
 
-    if (isTauri()) {
+    if (!!(window.__TAURI_INTERNALS__)) {
         try {
             return await window.__TAURI__.core.invoke('get_auth_token');
         } catch(e) {

@@ -24,20 +24,15 @@ const WS_URL = (window.__TAURI__ !== undefined)
 
 const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
 
-// ── Tauri Detection ──────────────────────────────────────
-var isTauri = function() {
-    return !!(window.__TAURI_INTERNALS__);
-};
-
 async function tauriInvoke(cmd, args) {
-    if (!isTauri()) throw new Error('Not in Tauri context');
+    if (!window.__TAURI_INTERNALS__) throw new Error('Not in Tauri context');
     return window.__TAURI__.core.invoke(cmd, args);
 }
 
 let whisperStatus = null;
 
 async function checkWhisperStatus() {
-    if (!isTauri()) return null;
+    if (!window.__TAURI_INTERNALS__) return null;
     try {
         whisperStatus = await tauriInvoke('check_whisper');
         return whisperStatus;
@@ -223,7 +218,7 @@ function hasSpeechSupport() {
 
 function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
-    if (show && isTauri() && whisperStatus?.available) {
+    if (show && !!(window.__TAURI_INTERNALS__) && whisperStatus?.available) {
         micLiveLabel.textContent = 'Local Whisper ●';
     } else if (show) {
         micLiveLabel.textContent = 'Live ●';
@@ -424,7 +419,7 @@ function initSpeechRecognition() {
         return;
     }
 
-    if (isTauri()) {
+    if (!!(window.__TAURI_INTERNALS__)) {
         checkWhisperStatus().then(status => {
             if (status?.available) {
                 micToggleBtn.title = 'Click to start recording (Local Whisper)';
@@ -609,7 +604,7 @@ function stopRecording() {
 }
 
 function toggleRecording() {
-    const useWhisper = isTauri() && whisperStatus?.available;
+    const useWhisper = !!(window.__TAURI_INTERNALS__) && whisperStatus?.available;
     if (useWhisper) {
         if (isWhisperRecording) {
             stopWhisperRecording();
@@ -1015,7 +1010,7 @@ function appendStatusMessage(text) {
 const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 
 async function downloadWhisperModel() {
-    if (!isTauri()) return;
+    if (!window.__TAURI_INTERNALS__) return;
     micToggleBtn.disabled = true;
     micToggleBtn.title = 'Downloading model…';
     micToggleBtn.classList.add('connecting');
@@ -1137,7 +1132,7 @@ connect();
 initContinuousNote();
 initSpeechRecognition();
 
-if (isTauri()) {
+if (!!(window.__TAURI_INTERNALS__)) {
     checkWhisperStatus().then(status => {
         if (status?.available) {
             micToggleBtn.title = 'Click to start recording (Local Whisper)';
