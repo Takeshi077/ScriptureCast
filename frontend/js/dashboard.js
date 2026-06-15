@@ -426,9 +426,6 @@ function initSpeechRecognition() {
                 appendStatusMessage('Local Whisper transcription ready');
             } else if (status?.sidecar_exists) {
                 micToggleBtn.title = 'Whisper model missing — click to download';
-            } else {
-                // whisper-cli not bundled — fall back to server transcription
-                appendStatusMessage('Local Whisper not available. Using server transcription.');
             }
         });
     } else {

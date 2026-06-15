@@ -143,10 +143,23 @@ async fn transcribe_audio(
         return Err("Whisper model not found. Download one first.".into());
     }
 
+    // Point working dir at the DLLs so whisper-cli finds them (dev: src-tauri/binaries, prod: resources/binaries)
+    let dll_dir = app
+        .path()
+        .resource_dir()
+        .map(|d| d.join("binaries"))
+        .unwrap_or_else(|_| {
+            std::env::current_dir()
+                .unwrap_or_default()
+                .join("src-tauri")
+                .join("binaries")
+        });
+
     let output = app
         .shell()
         .sidecar("whisper-cli")
         .map_err(|e| format!("Sidecar not found: {}", e))?
+        .current_dir(dll_dir)
         .args([
             "-f",
             audio_path.to_str().unwrap(),
