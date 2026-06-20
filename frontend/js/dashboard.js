@@ -1130,6 +1130,11 @@ let projectorWindow = null;
 let projectorCheckInterval = null;
 
 async function openProjectorScreen() {
+    if (projectorWindow) {
+        await closeProjectorScreen();
+        return;
+    }
+
     if (window.__TAURI_INTERNALS__) {
         try {
             const { WebviewWindow } = window.__TAURI__.webviewWindow;
@@ -1140,11 +1145,6 @@ async function openProjectorScreen() {
             }
         } catch (e) {
             console.warn('Error checking existing projector window:', e);
-        }
-    } else if (projectorWindow) {
-        if (!projectorWindow.closed) {
-            projectorWindow.focus();
-            return;
         }
     }
 
@@ -1258,12 +1258,35 @@ async function openProjectorScreen() {
     });
 }
 
+async function closeProjectorScreen() {
+    if (window.__TAURI_INTERNALS__) {
+        try {
+            const { WebviewWindow } = window.__TAURI__.webviewWindow;
+            const existingProj = WebviewWindow.getByLabel('projector');
+            if (existingProj) {
+                await existingProj.close().catch(() => {});
+            }
+        } catch (e) {
+            console.warn('Error closing projector window:', e);
+        }
+    } else if (projectorWindow && !projectorWindow.closed) {
+        projectorWindow.close();
+    }
+    projectorWindow = null;
+    if (projectorCheckInterval) {
+        clearInterval(projectorCheckInterval);
+        projectorCheckInterval = null;
+    }
+    updateProjectorButton(false);
+    showProjectorToast('info', 'Projector screen closed');
+}
+
 function updateProjectorButton(isOpen) {
     const btn = document.getElementById('open-screen-btn');
     if (!btn) return;
     if (isOpen) {
-        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg> Projector Open \u2713';
-        btn.className = 'btn btn-success';
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg> Close Projector';
+        btn.className = 'btn btn-danger';
     } else {
         btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg> Open Projector Screen';
         btn.className = 'btn btn-secondary';
