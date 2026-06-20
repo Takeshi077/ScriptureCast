@@ -1129,18 +1129,27 @@ function startDisplayWatch() {
 let projectorWindow = null;
 let projectorCheckInterval = null;
 
-function openProjectorScreen() {
-    if (projectorWindow) {
-        if (window.__TAURI_INTERNALS__) {
-            projectorWindow.setFocus();
-        } else if (!projectorWindow.closed) {
-            projectorWindow.focus();
+async function openProjectorScreen() {
+    if (window.__TAURI_INTERNALS__) {
+        try {
+            const { WebviewWindow } = window.__TAURI__.webviewWindow;
+            const existingProj = WebviewWindow.getByLabel('projector');
+            if (existingProj) {
+                await existingProj.close().catch(() => {});
+                await new Promise(r => setTimeout(r, 200));
+            }
+        } catch (e) {
+            console.warn('Error checking existing projector window:', e);
         }
-        if (projectorWindow) return;
+    } else if (projectorWindow) {
+        if (!projectorWindow.closed) {
+            projectorWindow.focus();
+            return;
+        }
     }
 
     if (window.__TAURI_INTERNALS__) {
-        getDisplays().then(displays => {
+        getDisplays().then(async (displays) => {
             const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
             const w = secondary.width || 1920;
             const h = secondary.height || 1080;
@@ -1155,17 +1164,39 @@ function openProjectorScreen() {
                 const { getCurrentWindow } = window.__TAURI__.window;
                 const { PhysicalPosition, PhysicalSize } = window.__TAURI__.dpi;
 
+                const curWin = getCurrentWindow();
+                const scaleFactor = await curWin.scaleFactor().catch(() => 1.0) || 1.0;
+
+                const logicalLeft = left / scaleFactor;
+                const logicalTop = top / scaleFactor;
+                const logicalW = w / scaleFactor;
+                const logicalH = h / scaleFactor;
+
                 const proj = new WebviewWindow('projector', {
                     url: projectorUrl,
                     title: 'ScriptureCast Projector',
                     decorations: false,
                     resizable: false,
+                    x: logicalLeft,
+                    y: logicalTop,
+                    width: logicalW,
+                    height: logicalH,
+                    fullscreen: true,
                 });
 
-                proj.once('tauri://created', () => {
-                    proj.setPosition(new PhysicalPosition(left, top));
-                    proj.setSize(new PhysicalSize(w, h));
-                    proj.setFullscreen(true);
+                proj.once('tauri://created', async () => {
+                    try {
+                        await proj.setPosition(new PhysicalPosition(left, top));
+                        await proj.setSize(new PhysicalSize(w, h));
+                        await proj.setFullscreen(true);
+                    } catch (err) {
+                        console.error('Failed to configure projector position/size:', err);
+                    }
+                });
+
+                proj.once('tauri://error', (err) => {
+                    console.error('Projector window error:', err);
+                    showProjectorToast('error', `Projector window error: ${err}`);
                 });
 
                 projectorWindow = proj;
