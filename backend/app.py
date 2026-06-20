@@ -337,17 +337,11 @@ async def websocket_endpoint(websocket: WebSocket):
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
-HTML_CACHE = {}
-
 def _read_html(name):
     path = os.path.join(FRONTEND_DIR, name)
-    if path in HTML_CACHE:
-        return HTML_CACHE[path]
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        HTML_CACHE[path] = content
-        return content
+            return f.read()
     return None
 
 @app.get("/")
