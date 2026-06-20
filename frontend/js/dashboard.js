@@ -1147,17 +1147,23 @@ function openProjectorScreen() {
             const projectorUrl = `${origin}/screen`;
 
             try {
-                const WebviewWindow = window.__TAURI__.webviewWindow.WebviewWindow;
+                const { WebviewWindow } = window.__TAURI__.webviewWindow;
+                const { getCurrentWindow } = window.__TAURI__.window;
+                const { PhysicalPosition, PhysicalSize } = window.__TAURI__.dpi;
+
                 const proj = new WebviewWindow('projector', {
                     url: projectorUrl,
                     title: 'ScriptureCast Projector',
-                    x: left,
-                    y: top,
-                    width: w,
-                    height: h,
                     decorations: false,
                     resizable: false,
                 });
+
+                proj.once('tauri://created', () => {
+                    proj.setPosition(new PhysicalPosition(left, top));
+                    proj.setSize(new PhysicalSize(w, h));
+                    proj.setFullscreen(true);
+                });
+
                 projectorWindow = proj;
                 updateProjectorButton(true);
                 showProjectorToast('success',
@@ -1166,22 +1172,10 @@ function openProjectorScreen() {
                         : `Projector opened (${w}x${h})`
                 );
 
-                if (projectorCheckInterval) clearInterval(projectorCheckInterval);
-                projectorCheckInterval = setInterval(() => {
-                    proj.isVisible().then(visible => {
-                        if (!visible) {
-                            projectorWindow = null;
-                            clearInterval(projectorCheckInterval);
-                            projectorCheckInterval = null;
-                            updateProjectorButton(false);
-                        }
-                    }).catch(() => {
-                        projectorWindow = null;
-                        clearInterval(projectorCheckInterval);
-                        projectorCheckInterval = null;
-                        updateProjectorButton(false);
-                    });
-                }, 2000);
+                proj.onCloseRequested(async () => {
+                    projectorWindow = null;
+                    updateProjectorButton(false);
+                });
             } catch (e) {
                 showProjectorToast('error', `Failed to open projector: ${e}`);
             }
