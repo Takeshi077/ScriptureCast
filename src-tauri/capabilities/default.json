@@ -42,6 +42,20 @@
         }
       ]
     },
-    "default"
+    "allow-check-whisper",
+    "allow-set-whisper-model-path",
+    "allow-write-model-file",
+    "allow-transcribe-audio",
+    "allow-get-server-url",
+    "allow-set-auth-token",
+    "allow-get-auth-token",
+    "allow-remove-auth-token",
+    "allow-start-semantic-server",
+    "allow-stop-semantic-server",
+    "allow-get-displays",
+    "allow-get-available-displays",
+    "allow-open-projector-on-display",
+    "allow-close-projector",
+    "allow-identify-displays"
   ]
 }
