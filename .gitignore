@@ -1,5 +1,20 @@
-# Bible database (large binary)
+# Databases and binary data
 data/bible.db
+data/users.db
+
+# ML/embedding data (generated)
+data/embeddings/
+
+# Build output / installers
+frontend/downloads/
+*.exe
+*.msi
+
+# Node.js dependencies (install via npm)
+node_modules/
+
+# Misc large files
+Scriputrecast.pdf
 
 # Python
 __pycache__/
