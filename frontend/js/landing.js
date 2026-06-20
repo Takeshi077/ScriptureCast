@@ -75,24 +75,10 @@ function initDownload() {
 
     const buttons = document.querySelectorAll('.download-btn');
     buttons.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        if (btn.getAttribute('href') !== '#') return;
+
+        btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const platform = btn.dataset.platform;
-
-            // Try to fetch release info from GitHub, fallback to placeholder
-            try {
-                const res = await fetch('https://api.github.com/repos/Takeshi077/ScriptureCast/releases/latest');
-                if (res.ok) {
-                    const data = await res.json();
-                    const asset = data.assets.find(a => a.name.toLowerCase().includes(platform));
-                    if (asset) {
-                        window.location.href = asset.browser_download_url;
-                        return;
-                    }
-                }
-            } catch {}
-
-            // Notify user if no release is available yet
             btn.textContent = 'Coming Soon';
             btn.style.pointerEvents = 'none';
             btn.style.opacity = '0.5';
