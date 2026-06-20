@@ -390,7 +390,7 @@ fn get_server_url(app: &tauri::AppHandle) -> String {
         .as_ref()
         .map(|u| u.to_string())
         .or_else(|| std::env::var("SCRIPTURECAST_URL").ok())
-        .unwrap_or_else(|| "http://localhost:8000".into())
+        .unwrap_or_else(|| "https://scripturecast.onrender.com".into())
 }
 
 #[tauri::command]
