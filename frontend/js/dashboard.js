@@ -1135,40 +1135,96 @@ function openProjectorScreen() {
         return;
     }
 
+    if (window.__TAURI_INTERNALS__) {
+        getDisplays().then(displays => {
+            const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
+            const w = secondary.width || 1920;
+            const h = secondary.height || 1080;
+            const left = secondary.x || 0;
+            const top = secondary.y || 0;
+
+            const origin = window.location.origin;
+            const projectorUrl = `${origin}/screen`;
+
+            try {
+                const WebviewWindow = window.__TAURI__.webviewWindow.WebviewWindow;
+                const proj = new WebviewWindow('projector', {
+                    url: projectorUrl,
+                    title: 'ScriptureCast Projector',
+                    x: left,
+                    y: top,
+                    width: w,
+                    height: h,
+                    decorations: false,
+                    resizable: false,
+                });
+                projectorWindow = proj;
+                updateProjectorButton(true);
+                showProjectorToast('success',
+                    secondary.name
+                        ? `Projector opened on "${secondary.name}" (${w}x${h})`
+                        : `Projector opened (${w}x${h})`
+                );
+
+                if (projectorCheckInterval) clearInterval(projectorCheckInterval);
+                projectorCheckInterval = setInterval(() => {
+                    proj.isVisible().then(visible => {
+                        if (!visible) {
+                            projectorWindow = null;
+                            clearInterval(projectorCheckInterval);
+                            projectorCheckInterval = null;
+                            updateProjectorButton(false);
+                        }
+                    }).catch(() => {
+                        projectorWindow = null;
+                        clearInterval(projectorCheckInterval);
+                        projectorCheckInterval = null;
+                        updateProjectorButton(false);
+                    });
+                }, 2000);
+            } catch (e) {
+                showProjectorToast('error', `Failed to open projector: ${e}`);
+            }
+        });
+        return;
+    }
+
+    // Browser: open synchronously to avoid popup blockers
+    const popup = window.open('/screen', 'ScriptureCast Projector',
+        'width=1920,height=1080,left=0,top=0');
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+        return;
+    }
+    projectorWindow = popup;
+    updateProjectorButton(true);
+    showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
+
+    if (projectorCheckInterval) clearInterval(projectorCheckInterval);
+    projectorCheckInterval = setInterval(() => {
+        if (projectorWindow && projectorWindow.closed) {
+            projectorWindow = null;
+            clearInterval(projectorCheckInterval);
+            projectorCheckInterval = null;
+            updateProjectorButton(false);
+        }
+    }, 1000);
+
+    // Reposition after getting display info
     getDisplays().then(displays => {
+        if (!projectorWindow || projectorWindow.closed) return;
         const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
         const w = secondary.width || 1920;
         const h = secondary.height || 1080;
         const left = secondary.x || 0;
         const top = secondary.y || 0;
 
-        const features = `width=${w},height=${h},left=${left},top=${top}`;
-
         try {
-            const popup = window.open('/screen', 'ScriptureCast Projector', features);
-            if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
-                return;
-            }
-            projectorWindow = popup;
-            updateProjectorButton(true);
-            if (secondary && !secondary.is_primary) {
-                showProjectorToast('success', `Projector opened on "${secondary.name || 'secondary display'}" (${w}x${h})`);
-            } else {
-                showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
-            }
-
-            if (projectorCheckInterval) clearInterval(projectorCheckInterval);
-            projectorCheckInterval = setInterval(() => {
-                if (projectorWindow && projectorWindow.closed) {
-                    projectorWindow = null;
-                    clearInterval(projectorCheckInterval);
-                    projectorCheckInterval = null;
-                    updateProjectorButton(false);
-                }
-            }, 1000);
-        } catch (e) {
-            showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+            projectorWindow.resizeTo(w, h);
+            projectorWindow.moveTo(left, top);
+        } catch { }
+        if (secondary && !secondary.is_primary) {
+            showProjectorToast('success', `Projector positioned on "${secondary.name || 'secondary display'}" (${w}x${h})`);
         }
     });
 }
