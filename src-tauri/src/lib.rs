@@ -294,7 +294,8 @@ async fn open_projector_on_display(
     let pos = monitor.position();
     let size = monitor.size();
     let server_url = get_server_url(&app);
-    let url = format!("{}/screen", server_url);
+    let url = format!("{}/screen", server_url.trim_end_matches('/'));
+    println!("DEBUG: Loading projector URL: {}", url);
 
     let label = "projector";
 
