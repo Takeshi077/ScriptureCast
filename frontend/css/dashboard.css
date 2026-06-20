@@ -815,6 +815,126 @@ input[type="number"] { width: 70px; text-align: center; }
     justify-content: center;
 }
 
+/* ── Outputs / Display Selection ── */
+#outputs-section {
+    border-top: 1px solid var(--border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#outputs-section.hidden {
+    display: none;
+}
+
+.outputs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.outputs-header h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.outputs-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.outputs-actions .btn-icon {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all var(--transition);
+}
+
+.outputs-actions .btn-icon:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(56, 189, 248, 0.08);
+}
+
+.outputs-actions .btn-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+#display-select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+#display-select:focus {
+    border-color: var(--accent-blue);
+}
+
+#display-select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+#open-projector-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+#open-projector-btn .btn-spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+#open-projector-btn.loading .btn-spinner {
+    display: inline-block;
+}
+
+#open-projector-btn.loading .btn-label {
+    display: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.browser-fallback-notice {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+    padding: 6px 0;
+}
+
 /* ============================================================
    QUOTE DETECTION PANEL
    ============================================================ */

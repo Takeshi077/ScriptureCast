@@ -385,6 +385,51 @@ async def get_screen(request: Request):
         return HTMLResponse(html)
     return HTMLResponse("Screen not found.", status_code=404)
 
+@app.get("/identify")
+async def get_identify(request: Request, n: int = 1):
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identify Display</title>
+<style>
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+html, body {{
+    width: 100%; height: 100%;
+    background: #0f172a;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    user-select: none;
+}}
+.number {{
+    font-size: min(40vw, 40vh, 360px);
+    font-weight: 900;
+    color: #38bdf8;
+    text-shadow: 0 0 60px rgba(56, 189, 248, 0.4), 0 0 120px rgba(56, 189, 248, 0.15);
+    line-height: 1;
+}}
+.label {{
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #64748b;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+}}
+</style>
+</head>
+<body>
+<div class="number">{n}</div>
+<div class="label">Display {n}</div>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
 @app.get("/api/verse")
 async def api_verse_preview(request: Request, book: str, chapter: int, verse: int = None, verse_end: int = None):
     user = get_current_user(request)

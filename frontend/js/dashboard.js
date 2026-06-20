@@ -1126,99 +1126,117 @@ function startDisplayWatch() {
 }
 
 // ── Projector Screen Management ────────────────────────────
+// Tauri-specific state
+let projectorOpen = false;
+let identifying = false;
+
+// Browser fallback state
 let projectorWindow = null;
 let projectorCheckInterval = null;
 
+// ── Tauri: Display enumeration ──
+async function loadDisplays() {
+    if (!window.__TAURI_INTERNALS__) return;
+    try {
+        const displays = await tauriInvoke('get_available_displays');
+        const select = document.getElementById('display-select');
+        if (!select) return;
+        select.innerHTML = '';
+
+        const autoOpt = document.createElement('option');
+        autoOpt.value = '';
+        autoOpt.textContent = 'Auto-Detect (secondary display)';
+        select.appendChild(autoOpt);
+
+        for (const d of displays) {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            const label = d.name ? d.name : `Display ${d.id.replace('display-', '')}`;
+            opt.textContent = `${label} — ${d.width}×${d.height}${d.is_primary ? ' (Primary)' : ''}`;
+            if (!d.is_primary) opt.selected = true;
+            select.appendChild(opt);
+        }
+    } catch (e) {
+        console.error('Failed to load displays:', e);
+    }
+}
+
+// ── Tauri: Identify displays ──
+async function identifyDisplays() {
+    if (!window.__TAURI_INTERNALS__ || identifying) return;
+    identifying = true;
+    const btn = document.getElementById('identify-displays-btn');
+    if (btn) btn.style.opacity = '0.5';
+    try {
+        await tauriInvoke('identify_displays');
+    } catch (e) {
+        console.error('Identify failed:', e);
+    }
+    identifying = false;
+    if (btn) btn.style.opacity = '1';
+}
+
+// ── Tauri: Open projector on selected display ──
+async function openProjectorOnDisplay() {
+    const btn = document.getElementById('open-projector-btn');
+    if (!btn) return;
+    btn.classList.add('loading');
+
+    try {
+        const select = document.getElementById('display-select');
+        let displayId = select ? select.value : '';
+
+        if (!displayId) {
+            const displays = await tauriInvoke('get_available_displays');
+            const secondary = displays.find(d => !d.is_primary);
+            displayId = secondary ? secondary.id : (displays[0] ? displays[0].id : 'display-1');
+        }
+
+        await tauriInvoke('open_projector_on_display', { displayId });
+        projectorOpen = true;
+        updateOutputsButton(true);
+        showProjectorToast('success', 'Projector opened on selected display');
+    } catch (e) {
+        showProjectorToast('error', `Failed to open projector: ${e}`);
+    } finally {
+        btn.classList.remove('loading');
+    }
+}
+
+// ── Tauri: Close projector ──
+async function closeProjectorWindow() {
+    try {
+        await tauriInvoke('close_projector_window');
+    } catch (e) {
+        console.warn('Error closing projector:', e);
+    }
+    projectorOpen = false;
+    updateOutputsButton(false);
+    showProjectorToast('info', 'Projector screen closed');
+}
+
+// ── Update the outputs open-projector-btn ──
+function updateOutputsButton(isOpen) {
+    const btn = document.getElementById('open-projector-btn');
+    if (!btn) return;
+    const label = btn.querySelector('.btn-label');
+    if (!label) return;
+    if (isOpen) {
+        label.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg> Close Projector';
+        btn.className = 'btn btn-danger';
+    } else {
+        label.innerHTML = 'Open Projector Screen';
+        btn.className = 'btn btn-secondary';
+    }
+}
+
+// ── Browser fallback: open via popup ──
 async function openProjectorScreen() {
     if (projectorWindow) {
         await closeProjectorScreen();
         return;
     }
 
-    if (window.__TAURI_INTERNALS__) {
-        try {
-            const { WebviewWindow } = window.__TAURI__.webviewWindow;
-            const existingProj = WebviewWindow.getByLabel('projector');
-            if (existingProj) {
-                await existingProj.close().catch(() => {});
-                await new Promise(r => setTimeout(r, 200));
-            }
-        } catch (e) {
-            console.warn('Error checking existing projector window:', e);
-        }
-    }
-
-    if (window.__TAURI_INTERNALS__) {
-        getDisplays().then(async (displays) => {
-            const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
-            const w = secondary.width || 1920;
-            const h = secondary.height || 1080;
-            const left = secondary.x || 0;
-            const top = secondary.y || 0;
-
-            const origin = window.location.origin;
-            const projectorUrl = `${origin}/screen`;
-
-            try {
-                const { WebviewWindow } = window.__TAURI__.webviewWindow;
-                const { getCurrentWindow } = window.__TAURI__.window;
-                const { PhysicalPosition, PhysicalSize } = window.__TAURI__.dpi;
-
-                const curWin = getCurrentWindow();
-                const scaleFactor = await curWin.scaleFactor().catch(() => 1.0) || 1.0;
-
-                const logicalLeft = left / scaleFactor;
-                const logicalTop = top / scaleFactor;
-                const logicalW = w / scaleFactor;
-                const logicalH = h / scaleFactor;
-
-                const proj = new WebviewWindow('projector', {
-                    url: projectorUrl,
-                    title: 'ScriptureCast Projector',
-                    decorations: false,
-                    resizable: false,
-                    x: logicalLeft,
-                    y: logicalTop,
-                    width: logicalW,
-                    height: logicalH,
-                    fullscreen: true,
-                });
-
-                proj.once('tauri://created', async () => {
-                    try {
-                        await proj.setPosition(new PhysicalPosition(left, top));
-                        await proj.setSize(new PhysicalSize(w, h));
-                        await proj.setFullscreen(true);
-                    } catch (err) {
-                        console.error('Failed to configure projector position/size:', err);
-                    }
-                });
-
-                proj.once('tauri://error', (err) => {
-                    console.error('Projector window error:', err);
-                    showProjectorToast('error', `Projector window error: ${err}`);
-                });
-
-                projectorWindow = proj;
-                updateProjectorButton(true);
-                showProjectorToast('success',
-                    secondary.name
-                        ? `Projector opened on "${secondary.name}" (${w}x${h})`
-                        : `Projector opened (${w}x${h})`
-                );
-
-                proj.onCloseRequested(async () => {
-                    projectorWindow = null;
-                    updateProjectorButton(false);
-                });
-            } catch (e) {
-                showProjectorToast('error', `Failed to open projector: ${e}`);
-            }
-        });
-        return;
-    }
-
-    // Browser: open synchronously to avoid popup blockers
     const popup = window.open('/screen', 'ScriptureCast Projector',
         'width=1920,height=1080,left=0,top=0');
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
@@ -1226,7 +1244,7 @@ async function openProjectorScreen() {
         return;
     }
     projectorWindow = popup;
-    updateProjectorButton(true);
+    updateBrowserButton(true);
     showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
 
     if (projectorCheckInterval) clearInterval(projectorCheckInterval);
@@ -1235,11 +1253,10 @@ async function openProjectorScreen() {
             projectorWindow = null;
             clearInterval(projectorCheckInterval);
             projectorCheckInterval = null;
-            updateProjectorButton(false);
+            updateBrowserButton(false);
         }
     }, 1000);
 
-    // Reposition after getting display info
     getDisplays().then(displays => {
         if (!projectorWindow || projectorWindow.closed) return;
         const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
@@ -1247,7 +1264,6 @@ async function openProjectorScreen() {
         const h = secondary.height || 1080;
         const left = secondary.x || 0;
         const top = secondary.y || 0;
-
         try {
             projectorWindow.resizeTo(w, h);
             projectorWindow.moveTo(left, top);
@@ -1259,17 +1275,7 @@ async function openProjectorScreen() {
 }
 
 async function closeProjectorScreen() {
-    if (window.__TAURI_INTERNALS__) {
-        try {
-            const { WebviewWindow } = window.__TAURI__.webviewWindow;
-            const existingProj = WebviewWindow.getByLabel('projector');
-            if (existingProj) {
-                await existingProj.close().catch(() => {});
-            }
-        } catch (e) {
-            console.warn('Error closing projector window:', e);
-        }
-    } else if (projectorWindow && !projectorWindow.closed) {
+    if (projectorWindow && !projectorWindow.closed) {
         projectorWindow.close();
     }
     projectorWindow = null;
@@ -1277,11 +1283,11 @@ async function closeProjectorScreen() {
         clearInterval(projectorCheckInterval);
         projectorCheckInterval = null;
     }
-    updateProjectorButton(false);
+    updateBrowserButton(false);
     showProjectorToast('info', 'Projector screen closed');
 }
 
-function updateProjectorButton(isOpen) {
+function updateBrowserButton(isOpen) {
     const btn = document.getElementById('open-screen-btn');
     if (!btn) return;
     if (isOpen) {
@@ -1312,7 +1318,31 @@ function showProjectorToast(type, message) {
     toast.classList.remove('hidden');
 }
 
+// ── Event Listeners ──
+// Browser fallback button
 document.getElementById('open-screen-btn').addEventListener('click', openProjectorScreen);
+
+// Tauri-specific outputs section
+if (window.__TAURI_INTERNALS__) {
+    const outputsSection = document.getElementById('outputs-section');
+    if (outputsSection) outputsSection.classList.remove('hidden');
+
+    document.getElementById('refresh-displays-btn')?.addEventListener('click', loadDisplays);
+    document.getElementById('identify-displays-btn')?.addEventListener('click', identifyDisplays);
+    document.getElementById('open-projector-btn')?.addEventListener('click', async () => {
+        if (projectorOpen) {
+            await closeProjectorWindow();
+        } else {
+            await openProjectorOnDisplay();
+        }
+    });
+
+    // Hide browser fallback in Tauri
+    const previewActions = document.getElementById('preview-actions');
+    if (previewActions) previewActions.classList.add('hidden');
+
+    loadDisplays();
+}
 
 startDisplayWatch();
 

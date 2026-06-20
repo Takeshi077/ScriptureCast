@@ -3,13 +3,17 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{Manager, WebviewWindowBuilder};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
 
 struct SemanticServer {
     process: Mutex<Option<Child>>,
     port: Mutex<Option<u16>>,
+}
+
+struct ProjectorState {
+    window_label: Mutex<Option<String>>,
 }
 
 impl Drop for SemanticServer {
@@ -223,6 +227,162 @@ async fn get_displays(app: tauri::AppHandle) -> Result<Vec<DisplayInfo>, String>
         .collect())
 }
 
+#[derive(Serialize)]
+struct DisplayInfoWithId {
+    id: String,
+    name: Option<String>,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+#[tauri::command]
+async fn get_available_displays(app: tauri::AppHandle) -> Result<Vec<DisplayInfoWithId>, String> {
+    let primary = app.primary_monitor().map_err(|e| e.to_string())?;
+    let all = app.available_monitors().map_err(|e| e.to_string())?;
+    Ok(all
+        .into_iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let pos = m.position();
+            let size = m.size();
+            let is_primary = primary.as_ref().map_or(false, |p| {
+                p.position().x == pos.x
+                    && p.position().y == pos.y
+                    && p.size().width == size.width
+                    && p.size().height == size.height
+            });
+            DisplayInfoWithId {
+                id: format!("display-{}", i + 1),
+                name: m.name().map(|s| s.to_string()),
+                x: pos.x,
+                y: pos.y,
+                width: size.width,
+                height: size.height,
+                is_primary,
+            }
+        })
+        .collect())
+}
+
+#[tauri::command]
+async fn open_projector_on_display(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProjectorState>,
+    display_id: String,
+) -> Result<(), String> {
+    // Close existing projector window if open
+    {
+        let label = state.window_label.lock().unwrap().clone();
+        if let Some(ref label) = label {
+            if let Some(window) = app.get_webview_window(label) {
+                let _ = window.close();
+            }
+        }
+    }
+
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+    let idx: usize = display_id
+        .strip_prefix("display-")
+        .and_then(|s| s.parse().ok())
+        .and_then(|i: usize| i.checked_sub(1))
+        .unwrap_or(0);
+    let monitor = monitors.get(idx).ok_or_else(|| "Display not found".to_string())?;
+
+    let pos = monitor.position();
+    let size = monitor.size();
+    let server_url = get_server_url(&app);
+    let url = format!("{}/screen", server_url);
+
+    let label = "projector";
+
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.close();
+    }
+
+    WebviewWindowBuilder::new(
+        &app,
+        label,
+        tauri::WebviewUrl::External(url.parse().map_err(|e: tauri::url::ParseError| e.to_string())?),
+    )
+    .position(pos.x as f64, pos.y as f64)
+    .inner_size(size.width as f64, size.height as f64)
+    .decorations(false)
+    .fullscreen(true)
+    .resizable(false)
+    .title("ScriptureCast Projector")
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    *state.window_label.lock().unwrap() = Some(label.to_string());
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_projector_window(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProjectorState>,
+) -> Result<(), String> {
+    let label = state.window_label.lock().unwrap().clone();
+    if let Some(ref label) = label {
+        if let Some(window) = app.get_webview_window(label) {
+            let _ = window.close();
+        }
+    }
+    *state.window_label.lock().unwrap() = None;
+    Ok(())
+}
+
+#[tauri::command]
+async fn identify_displays(app: tauri::AppHandle) -> Result<(), String> {
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+    let server_url = get_server_url(&app);
+
+    let mut labels = Vec::new();
+    for (i, monitor) in monitors.iter().enumerate() {
+        let label = format!("identify-{}", i + 1);
+        let url = format!("{}/identify?n={}", server_url, i + 1);
+
+        let pos = monitor.position();
+        let size = monitor.size();
+        let w = (size.width as f64).min(800.0);
+        let h = (size.height as f64).min(600.0);
+        let x = pos.x as f64 + (size.width as f64 - w) / 2.0;
+        let y = pos.y as f64 + (size.height as f64 - h) / 2.0;
+
+        WebviewWindowBuilder::new(
+            &app,
+            &label,
+            tauri::WebviewUrl::External(
+                url.parse().map_err(|e: tauri::url::ParseError| e.to_string())?,
+            ),
+        )
+        .position(x, y)
+        .inner_size(w, h)
+        .decorations(false)
+        .resizable(false)
+        .title("Identify Display")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+        labels.push(label);
+    }
+
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        for label in &labels {
+            if let Some(window) = app_clone.get_webview_window(label) {
+                let _ = window.close();
+            }
+        }
+    });
+
+    Ok(())
+}
+
 fn get_server_url(app: &tauri::AppHandle) -> String {
     app.config()
         .build
@@ -345,6 +505,9 @@ pub fn run() {
             process: Mutex::new(None),
             port: Mutex::new(None),
         })
+        .manage(ProjectorState {
+            window_label: Mutex::new(None),
+        })
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 if let Ok(url) = tauri::Url::parse("https://scripturecast.onrender.com") {
@@ -365,6 +528,10 @@ pub fn run() {
             start_semantic_server,
             stop_semantic_server,
             get_displays,
+            get_available_displays,
+            open_projector_on_display,
+            close_projector_window,
+            identify_displays,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

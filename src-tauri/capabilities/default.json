@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "projector"],
+  "windows": ["main", "projector", "identify-*"],
   "remote": {
     "urls": [
       "https://scripturecast.onrender.com/**"
