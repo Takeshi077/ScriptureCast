@@ -1130,9 +1130,13 @@ let projectorWindow = null;
 let projectorCheckInterval = null;
 
 function openProjectorScreen() {
-    if (projectorWindow && !projectorWindow.closed) {
-        projectorWindow.focus();
-        return;
+    if (projectorWindow) {
+        if (window.__TAURI_INTERNALS__) {
+            projectorWindow.setFocus();
+        } else if (!projectorWindow.closed) {
+            projectorWindow.focus();
+        }
+        if (projectorWindow) return;
     }
 
     if (window.__TAURI_INTERNALS__) {
