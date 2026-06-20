@@ -1136,11 +1136,11 @@ function openProjectorScreen() {
     }
 
     getDisplays().then(displays => {
-        const secondary = displays.find(d => !d.is_primary) || displays[0];
+        const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
         const w = secondary.width || 1920;
         const h = secondary.height || 1080;
-        const left = secondary.x;
-        const top = secondary.y;
+        const left = secondary.x || 0;
+        const top = secondary.y || 0;
 
         const features = `width=${w},height=${h},left=${left},top=${top}`;
 
