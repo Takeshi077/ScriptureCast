@@ -2,7 +2,7 @@
 set -e
 
 echo "=== Installing Python dependencies ==="
-pip install --no-cache-dir -r backend/requirements.txt
+pip install -r backend/requirements.txt
 
 echo "=== Setting up data directories ==="
 mkdir -p data/embeddings
