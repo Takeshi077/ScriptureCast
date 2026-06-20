@@ -1,0 +1,95 @@
+[[permission]]
+identifier = "allow-check-whisper"
+description = "Allows checking whisper model availability"
+commands.allow = ["check_whisper"]
+
+[[permission]]
+identifier = "allow-set-whisper-model-path"
+description = "Allows setting whisper model path"
+commands.allow = ["set_whisper_model_path"]
+
+[[permission]]
+identifier = "allow-write-model-file"
+description = "Allows writing whisper model file"
+commands.allow = ["write_model_file"]
+
+[[permission]]
+identifier = "allow-transcribe-audio"
+description = "Allows transcribing audio via whisper"
+commands.allow = ["transcribe_audio"]
+
+[[permission]]
+identifier = "allow-get-server-url"
+description = "Allows getting the server URL"
+commands.allow = ["get_server_url_cmd"]
+
+[[permission]]
+identifier = "allow-set-auth-token"
+description = "Allows setting auth token"
+commands.allow = ["set_auth_token"]
+
+[[permission]]
+identifier = "allow-get-auth-token"
+description = "Allows getting auth token"
+commands.allow = ["get_auth_token"]
+
+[[permission]]
+identifier = "allow-remove-auth-token"
+description = "Allows removing auth token"
+commands.allow = ["remove_auth_token"]
+
+[[permission]]
+identifier = "allow-start-semantic-server"
+description = "Allows starting semantic search server"
+commands.allow = ["start_semantic_server"]
+
+[[permission]]
+identifier = "allow-stop-semantic-server"
+description = "Allows stopping semantic search server"
+commands.allow = ["stop_semantic_server"]
+
+[[permission]]
+identifier = "allow-get-displays"
+description = "Allows getting display info"
+commands.allow = ["get_displays"]
+
+[[permission]]
+identifier = "allow-get-available-displays"
+description = "Allows getting available display list"
+commands.allow = ["get_available_displays"]
+
+[[permission]]
+identifier = "allow-open-projector-on-display"
+description = "Allows opening projector on specific display"
+commands.allow = ["open_projector_on_display"]
+
+[[permission]]
+identifier = "allow-close-projector"
+description = "Allows closing projector window"
+commands.allow = ["close_projector_window"]
+
+[[permission]]
+identifier = "allow-identify-displays"
+description = "Allows identifying displays"
+commands.allow = ["identify_displays"]
+
+[[set]]
+identifier = "default"
+description = "Default set of permissions for ScriptureCast app commands"
+permissions = [
+    "allow-check-whisper",
+    "allow-set-whisper-model-path",
+    "allow-write-model-file",
+    "allow-transcribe-audio",
+    "allow-get-server-url",
+    "allow-set-auth-token",
+    "allow-get-auth-token",
+    "allow-remove-auth-token",
+    "allow-start-semantic-server",
+    "allow-stop-semantic-server",
+    "allow-get-displays",
+    "allow-get-available-displays",
+    "allow-open-projector-on-display",
+    "allow-close-projector",
+    "allow-identify-displays",
+]

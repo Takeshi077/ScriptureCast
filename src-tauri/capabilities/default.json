@@ -41,6 +41,7 @@
           "sidecar": true
         }
       ]
-    }
+    },
+    "default"
   ]
 }

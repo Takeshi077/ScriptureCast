@@ -305,7 +305,7 @@ async fn open_projector_on_display(
     WebviewWindowBuilder::new(
         &app,
         label,
-        tauri::WebviewUrl::External(url.parse().map_err(|e: tauri::url::ParseError| e.to_string())?),
+        tauri::WebviewUrl::External(tauri::Url::parse(&url).map_err(|e| e.to_string())?),
     )
     .position(pos.x as f64, pos.y as f64)
     .inner_size(size.width as f64, size.height as f64)
@@ -356,7 +356,7 @@ async fn identify_displays(app: tauri::AppHandle) -> Result<(), String> {
             &app,
             &label,
             tauri::WebviewUrl::External(
-                url.parse().map_err(|e: tauri::url::ParseError| e.to_string())?,
+                tauri::Url::parse(&url).map_err(|e| e.to_string())?,
             ),
         )
         .position(x, y)
@@ -426,7 +426,7 @@ async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn start_semantic_server(app: tauri::AppHandle, state: tauri::State<'_, SemanticServer>) -> Result<u16, String> {
     {
-        let mut port = state.port.lock().unwrap();
+        let port = state.port.lock().unwrap();
         if let Some(p) = *port {
             return Ok(p);
         }
