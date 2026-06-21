@@ -549,12 +549,10 @@ async function startRecording() {
         };
 
     } catch (err) {
-        console.error('Failed to start live transcription:', err);
-        alert(`Error starting microphone: ${err.message}`);
-        micToggleBtn.classList.remove('connecting', 'active');
-        isRecording = false;
-        setLiveLabel(false);
-        showTextFallback();
+        alert('Recording error: ' + err.message);
+        console.error('Recording error:', err);
+        micToggleBtn.classList.remove('connecting');
+        micToggleBtn.title = 'Click to start recording';
     }
 }
 
