@@ -91,6 +91,7 @@ async fn set_whisper_model_path(
 
 #[tauri::command]
 async fn write_model_file(
+    app: tauri::AppHandle,
     state: tauri::State<'_, WhisperState>,
     data_base64: String,
 ) -> Result<String, String> {
@@ -104,11 +105,7 @@ async fn write_model_file(
         .lock()
         .unwrap()
         .clone()
-        .unwrap_or_else(|| {
-            let dir = PathBuf::from(".").join("models");
-            let _ = std::fs::create_dir_all(&dir);
-            dir.join(MODEL_FILENAME)
-        });
+        .unwrap_or_else(|| get_models_dir(&app).join(MODEL_FILENAME));
 
     if let Some(parent) = model_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
