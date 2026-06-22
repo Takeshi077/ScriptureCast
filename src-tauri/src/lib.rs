@@ -184,7 +184,7 @@ async fn transcribe_audio(
             std::fs::read_to_string(&json_path).map_err(|e| format!("Read JSON: {}", e))?;
         let result: serde_json::Value =
             serde_json::from_str(&json_str).map_err(|e| format!("JSON parse: {}", e))?;
-        let text = result["text"].as_str().unwrap_or("").to_string();
+        let text = result["transcription"][0]["text"].as_str().unwrap_or("").to_string();
         let _ = std::fs::remove_file(&json_path);
         Ok(text)
     } else {
