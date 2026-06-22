@@ -44,7 +44,7 @@ struct WhisperStatus {
 fn get_models_dir(app: &tauri::AppHandle) -> PathBuf {
     let dir = app
         .path()
-        .resource_dir()
+        .app_data_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("models");
     let _ = std::fs::create_dir_all(&dir);
