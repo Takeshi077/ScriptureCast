@@ -170,28 +170,38 @@ async fn transcribe_audio(
             "-of",
             audio_path.to_str().unwrap(),
             "-nt",
+            "-np",
         ])
         .output()
         .await
         .map_err(|e| format!("Failed to run whisper: {}", e))?;
 
-    let _ = std::fs::remove_file(&audio_path);
-
     let json_path = PathBuf::from(format!("{}.json", audio_path.to_string_lossy()));
 
-    if output.status.success() {
-        let json_str =
-            std::fs::read_to_string(&json_path).map_err(|e| format!("Read JSON: {}", e))?;
-        let result: serde_json::Value =
-            serde_json::from_str(&json_str).map_err(|e| format!("JSON parse: {}", e))?;
-        let text = result["transcription"][0]["text"].as_str().unwrap_or("").to_string();
-        let _ = std::fs::remove_file(&json_path);
-        Ok(text)
-    } else {
-        let _ = std::fs::remove_file(&json_path);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("whisper failed: {}", stderr))
+    // Try success path regardless of exit code — whisper-cli exits 0 even on errors
+    if let Ok(json_str) = std::fs::read_to_string(&json_path) {
+        if let Ok(result) = serde_json::from_str::<serde_json::Value>(&json_str) {
+            let text = result["transcription"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            let _ = std::fs::remove_file(&audio_path);
+            let _ = std::fs::remove_file(&json_path);
+            return Ok(text);
+        }
     }
+
+    // Fallback: report error with full diagnostics
+    let _ = std::fs::remove_file(&audio_path);
+    let _ = std::fs::remove_file(&json_path);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Err(format!(
+        "whisper failed (exit: {:?})\nstderr: {}\nstdout: {}",
+        output.status.code(),
+        stderr,
+        stdout
+    ))
 }
 
 #[derive(Serialize)]
