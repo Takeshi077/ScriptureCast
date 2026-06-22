@@ -218,9 +218,7 @@ function hasSpeechSupport() {
 
 function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
-    if (show && !!(window.__TAURI_INTERNALS__) && whisperStatus?.available) {
-        micLiveLabel.textContent = 'Local Whisper ●';
-    } else if (show) {
+    if (show) {
         micLiveLabel.textContent = 'Live ●';
     } else {
         micLiveLabel.textContent = 'Mic';
@@ -421,16 +419,12 @@ function initSpeechRecognition() {
 
     if (!!(window.__TAURI_INTERNALS__)) {
         checkWhisperStatus().then(status => {
-            if (status?.available) {
-                micToggleBtn.title = 'Click to start recording (Local Whisper)';
-                appendStatusMessage('Local Whisper transcription ready');
-            } else if (status?.sidecar_exists) {
+            if (!status?.available && status?.sidecar_exists) {
                 micToggleBtn.title = 'Whisper model missing — click to download';
             }
         });
-    } else {
-        micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
     }
+    micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
     initContinuousNote();
 }
 
@@ -599,19 +593,12 @@ function stopRecording() {
 }
 
 function toggleRecording() {
-    const useWhisper = !!(window.__TAURI_INTERNALS__) && whisperStatus?.available;
-    if (useWhisper) {
-        if (isWhisperRecording) {
-            stopWhisperRecording();
-        } else {
-            startWhisperRecording();
-        }
+    if (isRecording) {
+        stopRecording();
+    } else if (isWhisperRecording) {
+        stopWhisperRecording();
     } else {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
+        startRecording();
     }
 }
 
