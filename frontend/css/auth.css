@@ -656,3 +656,15 @@ section {
     .step { max-width: 100%; }
     .step-arrow { transform: rotate(90deg); }
 }
+
+@media (min-width: 769px) {
+    .auth-logo {
+        flex-direction: column;
+        gap: 16px;
+        font-size: 24px;
+    }
+    .auth-logo svg {
+        width: 56px;
+        height: 56px;
+    }
+}
