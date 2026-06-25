@@ -1014,6 +1014,10 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 @media (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
     #app-header {
         padding: 0 12px;
     }
