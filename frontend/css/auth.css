@@ -538,7 +538,8 @@ section {
     text-decoration: none;
 }
 
-.auth-logo svg { width: 26px; height: 26px; }
+.auth-logo svg,
+.auth-logo img { width: 26px; height: 26px; }
 
 .auth-title {
     font-family: var(--font-brand);
@@ -659,12 +660,13 @@ section {
 
 @media (min-width: 769px) {
     .auth-logo {
-        flex-direction: column;
-        gap: 16px;
-        font-size: 24px;
+        flex-direction: row;
+        gap: 12px;
+        font-size: 28px;
     }
-    .auth-logo svg {
-        width: 56px;
-        height: 56px;
+    .auth-logo svg,
+    .auth-logo img {
+        width: 44px;
+        height: 44px;
     }
 }
