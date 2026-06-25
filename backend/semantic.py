@@ -6,6 +6,7 @@ import threading
 
 try:
     import numpy as np
+    import sklearn
     _HAS_DEPS = True
 except ImportError:
     _HAS_DEPS = False

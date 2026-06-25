@@ -1,8 +1,31 @@
 use serde::Serialize;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{Manager, WebviewWindowBuilder};
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_store::StoreExt;
+
+struct SemanticServer {
+    process: Mutex<Option<Child>>,
+    port: Mutex<Option<u16>>,
+}
+
+struct ProjectorState {
+    window_label: Mutex<Option<String>>,
+}
+
+impl Drop for SemanticServer {
+    fn drop(&mut self) {
+        if let Ok(mut p) = self.process.lock() {
+            if let Some(ref mut child) = *p {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+}
 
 const MODEL_FILENAME: &str = "ggml-base.bin";
 
@@ -21,7 +44,7 @@ struct WhisperStatus {
 fn get_models_dir(app: &tauri::AppHandle) -> PathBuf {
     let dir = app
         .path()
-        .resource_dir()
+        .local_data_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("models");
     let _ = std::fs::create_dir_all(&dir);
@@ -68,6 +91,7 @@ async fn set_whisper_model_path(
 
 #[tauri::command]
 async fn write_model_file(
+    app: tauri::AppHandle,
     state: tauri::State<'_, WhisperState>,
     data_base64: String,
 ) -> Result<String, String> {
@@ -81,11 +105,7 @@ async fn write_model_file(
         .lock()
         .unwrap()
         .clone()
-        .unwrap_or_else(|| {
-            let dir = PathBuf::from(".").join("models");
-            let _ = std::fs::create_dir_all(&dir);
-            dir.join(MODEL_FILENAME)
-        });
+        .unwrap_or_else(|| get_models_dir(&app).join(MODEL_FILENAME));
 
     if let Some(parent) = model_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -124,34 +144,258 @@ async fn transcribe_audio(
         return Err("Whisper model not found. Download one first.".into());
     }
 
+    // Point working dir at the DLLs so whisper-cli finds them (dev: src-tauri/binaries, prod: resources/binaries)
+    let dll_dir = app
+        .path()
+        .resource_dir()
+        .map(|d| d.join("binaries"))
+        .unwrap_or_else(|_| {
+            std::env::current_dir()
+                .unwrap_or_default()
+                .join("src-tauri")
+                .join("binaries")
+        });
+
     let output = app
         .shell()
         .sidecar("whisper-cli")
         .map_err(|e| format!("Sidecar not found: {}", e))?
+        .current_dir(dll_dir)
         .args([
             "-f",
             audio_path.to_str().unwrap(),
             "-m",
             model_path.to_str().unwrap(),
             "-oj",
+            "-of",
+            audio_path.to_str().unwrap(),
             "-nt",
+            "-np",
         ])
         .output()
         .await
         .map_err(|e| format!("Failed to run whisper: {}", e))?;
 
-    let _ = std::fs::remove_file(&audio_path);
+    let json_path = PathBuf::from(format!("{}.json", audio_path.to_string_lossy()));
 
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let result: serde_json::Value =
-            serde_json::from_str(&stdout).map_err(|e| format!("JSON parse: {}", e))?;
-        let text = result["text"].as_str().unwrap_or("").to_string();
-        Ok(text)
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("whisper failed: {}", stderr))
+    // Try success path regardless of exit code — whisper-cli exits 0 even on errors
+    if let Ok(json_str) = std::fs::read_to_string(&json_path) {
+        if let Ok(result) = serde_json::from_str::<serde_json::Value>(&json_str) {
+            let text = result["transcription"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            let _ = std::fs::remove_file(&audio_path);
+            let _ = std::fs::remove_file(&json_path);
+            return Ok(text);
+        }
     }
+
+    // Fallback: report error with full diagnostics
+    let _ = std::fs::remove_file(&audio_path);
+    let _ = std::fs::remove_file(&json_path);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Err(format!(
+        "whisper failed (exit: {:?})\nstderr: {}\nstdout: {}",
+        output.status.code(),
+        stderr,
+        stdout
+    ))
+}
+
+#[derive(Serialize)]
+struct DisplayInfo {
+    name: Option<String>,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+#[tauri::command]
+async fn get_displays(app: tauri::AppHandle) -> Result<Vec<DisplayInfo>, String> {
+    let primary = app.primary_monitor().map_err(|e| e.to_string())?;
+    let all = app.available_monitors().map_err(|e| e.to_string())?;
+    Ok(all
+        .into_iter()
+        .map(|m| {
+            let pos = m.position();
+            let size = m.size();
+            let is_primary = primary.as_ref().map_or(false, |p| {
+                p.position().x == pos.x
+                    && p.position().y == pos.y
+                    && p.size().width == size.width
+                    && p.size().height == size.height
+            });
+            DisplayInfo {
+                name: m.name().map(|s| s.to_string()),
+                x: pos.x,
+                y: pos.y,
+                width: size.width,
+                height: size.height,
+                is_primary,
+            }
+        })
+        .collect())
+}
+
+#[derive(Serialize)]
+struct DisplayInfoWithId {
+    id: String,
+    name: Option<String>,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+#[tauri::command]
+async fn get_available_displays(app: tauri::AppHandle) -> Result<Vec<DisplayInfoWithId>, String> {
+    let primary = app.primary_monitor().map_err(|e| e.to_string())?;
+    let all = app.available_monitors().map_err(|e| e.to_string())?;
+    Ok(all
+        .into_iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let pos = m.position();
+            let size = m.size();
+            let is_primary = primary.as_ref().map_or(false, |p| {
+                p.position().x == pos.x
+                    && p.position().y == pos.y
+                    && p.size().width == size.width
+                    && p.size().height == size.height
+            });
+            DisplayInfoWithId {
+                id: format!("display-{}", i + 1),
+                name: m.name().map(|s| s.to_string()),
+                x: pos.x,
+                y: pos.y,
+                width: size.width,
+                height: size.height,
+                is_primary,
+            }
+        })
+        .collect())
+}
+
+#[tauri::command]
+async fn open_projector_on_display(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProjectorState>,
+    display_id: String,
+) -> Result<(), String> {
+    // Close existing projector window if open
+    {
+        let label = state.window_label.lock().unwrap().clone();
+        if let Some(ref label) = label {
+            if let Some(window) = app.get_webview_window(label) {
+                let _ = window.close();
+            }
+        }
+    }
+
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+    let idx: usize = display_id
+        .strip_prefix("display-")
+        .and_then(|s| s.parse().ok())
+        .and_then(|i: usize| i.checked_sub(1))
+        .unwrap_or(0);
+    let monitor = monitors.get(idx).ok_or_else(|| "Display not found".to_string())?;
+
+    let pos = monitor.position();
+    let size = monitor.size();
+    let server_url = get_server_url(&app);
+    let url = format!("{}/screen", server_url.trim_end_matches('/'));
+    println!("DEBUG: Loading projector URL: {}", url);
+
+    let label = "projector";
+
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.close();
+    }
+
+    WebviewWindowBuilder::new(
+        &app,
+        label,
+        tauri::WebviewUrl::External(tauri::Url::parse(&url).map_err(|e| e.to_string())?),
+    )
+    .position(pos.x as f64, pos.y as f64)
+    .inner_size(size.width as f64, size.height as f64)
+    .decorations(false)
+    .fullscreen(true)
+    .resizable(false)
+    .title("ScriptureCast Projector")
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    *state.window_label.lock().unwrap() = Some(label.to_string());
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_projector_window(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProjectorState>,
+) -> Result<(), String> {
+    let label = state.window_label.lock().unwrap().clone();
+    if let Some(ref label) = label {
+        if let Some(window) = app.get_webview_window(label) {
+            let _ = window.close();
+        }
+    }
+    *state.window_label.lock().unwrap() = None;
+    Ok(())
+}
+
+#[tauri::command]
+async fn identify_displays(app: tauri::AppHandle) -> Result<(), String> {
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+    let server_url = get_server_url(&app);
+
+    let mut labels = Vec::new();
+    for (i, monitor) in monitors.iter().enumerate() {
+        let label = format!("identify-{}", i + 1);
+        let url = format!("{}/identify?n={}", server_url, i + 1);
+
+        let pos = monitor.position();
+        let size = monitor.size();
+        let w = (size.width as f64).min(800.0);
+        let h = (size.height as f64).min(600.0);
+        let x = pos.x as f64 + (size.width as f64 - w) / 2.0;
+        let y = pos.y as f64 + (size.height as f64 - h) / 2.0;
+
+        WebviewWindowBuilder::new(
+            &app,
+            &label,
+            tauri::WebviewUrl::External(
+                tauri::Url::parse(&url).map_err(|e| e.to_string())?,
+            ),
+        )
+        .position(x, y)
+        .inner_size(w, h)
+        .decorations(false)
+        .resizable(false)
+        .title("Identify Display")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+        labels.push(label);
+    }
+
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        for label in &labels {
+            if let Some(window) = app_clone.get_webview_window(label) {
+                let _ = window.close();
+            }
+        }
+    });
+
+    Ok(())
 }
 
 fn get_server_url(app: &tauri::AppHandle) -> String {
@@ -161,7 +405,7 @@ fn get_server_url(app: &tauri::AppHandle) -> String {
         .as_ref()
         .map(|u| u.to_string())
         .or_else(|| std::env::var("SCRIPTURECAST_URL").ok())
-        .unwrap_or_else(|| "http://localhost:8000".into())
+        .unwrap_or_else(|| "https://scripturecast.onrender.com".into())
 }
 
 #[tauri::command]
@@ -169,18 +413,119 @@ async fn get_server_url_cmd(app: tauri::AppHandle) -> String {
     get_server_url(&app)
 }
 
+#[tauri::command]
+async fn set_auth_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store.set("token", serde_json::Value::String(token));
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_auth_token(app: tauri::AppHandle) -> Result<String, String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store
+        .get("token")
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .ok_or_else(|| "No token found".into())
+}
+
+#[tauri::command]
+async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store.delete("token");
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_semantic_server(app: tauri::AppHandle, state: tauri::State<'_, SemanticServer>) -> Result<u16, String> {
+    {
+        let port = state.port.lock().unwrap();
+        if let Some(p) = *port {
+            return Ok(p);
+        }
+    }
+
+    let backend_dir = app.path().resource_dir()
+        .map_err(|e| format!("Resource dir: {}", e))?
+        .join("backend");
+    let script = backend_dir.join("semantic_server.py");
+
+    let script = if script.exists() {
+        script
+    } else {
+        // fallback: relative to CWD (dev mode)
+        let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+        cwd.join("backend").join("semantic_server.py")
+    };
+
+    if !script.exists() {
+        return Err("semantic_server.py not found".into());
+    }
+
+    for python_cmd in &["python3", "python"] {
+        if Command::new(python_cmd).arg("--version").output().is_err() {
+            continue;
+        }
+
+        let mut child = Command::new(python_cmd)
+            .arg(&script)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Spawn: {}", e))?;
+
+        if let Some(stdout) = child.stdout.take() {
+            let reader = BufReader::new(stdout);
+            if let Some(Ok(line)) = reader.lines().next() {
+                if let Some(port_str) = line.trim().strip_prefix("SEMANTIC_READY:") {
+                    if let Ok(port) = port_str.parse::<u16>() {
+                        *state.port.lock().unwrap() = Some(port);
+                        *state.process.lock().unwrap() = Some(child);
+                        return Ok(port);
+                    }
+                }
+            }
+        }
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    Err("Failed to start semantic server (install Python + scikit-learn)".into())
+}
+
+#[tauri::command]
+async fn stop_semantic_server(state: tauri::State<'_, SemanticServer>) -> Result<(), String> {
+    let mut proc = state.process.lock().map_err(|e| e.to_string())?;
+    if let Some(ref mut child) = *proc {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    *proc = None;
+    *state.port.lock().map_err(|e| e.to_string())? = None;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .manage(WhisperState {
             model_path: Mutex::new(None),
         })
+        .manage(SemanticServer {
+            process: Mutex::new(None),
+            port: Mutex::new(None),
+        })
+        .manage(ProjectorState {
+            window_label: Mutex::new(None),
+        })
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                let url_str = get_server_url(app.handle());
-                if let Ok(url) = tauri::Url::parse(&url_str) {
+                if let Ok(url) = tauri::Url::parse("https://scripturecast.onrender.com") {
                     let _ = window.navigate(url);
                 }
             }
@@ -192,6 +537,16 @@ pub fn run() {
             write_model_file,
             transcribe_audio,
             get_server_url_cmd,
+            set_auth_token,
+            get_auth_token,
+            remove_auth_token,
+            start_semantic_server,
+            stop_semantic_server,
+            get_displays,
+            get_available_displays,
+            open_projector_on_display,
+            close_projector_window,
+            identify_displays,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

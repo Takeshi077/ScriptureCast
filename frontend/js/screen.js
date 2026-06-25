@@ -1,6 +1,6 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const isTauri = window.__TAURI__ !== undefined;
-const WS_URL = isTauri
+
+const WS_URL = !!(window.__TAURI_INTERNALS__)
     ? 'wss://scripturecast.onrender.com/ws'
     : `${wsProtocol}//${window.location.host}/ws`;
 
@@ -25,12 +25,34 @@ function send(obj) {
     }
 }
 
-function connect() {
+async function getToken() {
+    const local = localStorage.getItem('token');
+    if (local) return local;
+
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    if (cookie) return cookie;
+
+    if (!!(window.__TAURI_INTERNALS__)) {
+        try {
+            return await window.__TAURI__.core.invoke('get_auth_token');
+        } catch(e) {
+            console.log('Tauri store failed', e);
+        }
+    }
+    return null;
+}
+
+async function connect() {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         return;
     }
 
-    const token = localStorage.getItem('token');
+    let token;
+    try {
+        token = await getToken();
+    } catch {
+        token = null;
+    }
     const urlWithToken = token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
     socket = new WebSocket(urlWithToken);
 

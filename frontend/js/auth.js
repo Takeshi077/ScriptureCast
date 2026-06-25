@@ -1,4 +1,5 @@
 (function () {
+  const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
   const errorEl = document.getElementById('auth-error');
@@ -14,7 +15,7 @@
   }
 
   async function api(path, body) {
-    const resp = await fetch(path, {
+    const resp = await fetch(`${BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -45,6 +46,11 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
+        try {
+          if (window.__TAURI_INTERNALS__) {
+            await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+          }
+        } catch (_) { /* Tauri store is optional */ }
         redirect();
       } catch (err) {
         showError(err.message);
@@ -68,6 +74,11 @@
           password: document.getElementById('password').value,
         });
         localStorage.setItem('token', data.token);
+        try {
+          if (window.__TAURI_INTERNALS__) {
+            await window.__TAURI__.core.invoke('set_auth_token', { token: data.token });
+          }
+        } catch (_) { /* Tauri store is optional */ }
         redirect();
       } catch (err) {
         showError(err.message);

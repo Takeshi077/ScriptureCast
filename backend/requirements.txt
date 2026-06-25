@@ -5,9 +5,11 @@ sounddevice
 numpy
 scipy
 joblib
+scikit-learn
 python-multipart
 assemblyai
 requests
 python-jose[cryptography]
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
+psycopg2-binary

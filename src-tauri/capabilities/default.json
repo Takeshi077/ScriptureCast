@@ -2,9 +2,26 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": ["main", "projector", "identify-*"],
+  "remote": {
+    "urls": [
+      "https://scripturecast.onrender.com/**"
+    ]
+  },
   "permissions": [
     "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-center",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-always-on-top",
+    "core:webview:allow-create-webview-window",
+    "store:default",
     "opener:default",
     "shell:default",
     {
@@ -24,6 +41,21 @@
           "sidecar": true
         }
       ]
-    }
+    },
+    "allow-check-whisper",
+    "allow-set-whisper-model-path",
+    "allow-write-model-file",
+    "allow-transcribe-audio",
+    "allow-get-server-url",
+    "allow-set-auth-token",
+    "allow-get-auth-token",
+    "allow-remove-auth-token",
+    "allow-start-semantic-server",
+    "allow-stop-semantic-server",
+    "allow-get-displays",
+    "allow-get-available-displays",
+    "allow-open-projector-on-display",
+    "allow-close-projector",
+    "allow-identify-displays"
   ]
 }

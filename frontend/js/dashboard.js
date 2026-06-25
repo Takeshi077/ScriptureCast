@@ -2,6 +2,21 @@
  * ScriptureCast — Operator Dashboard JavaScript
  * Handles WebSocket communication, state management, and all UI interactions.
  */
+(function() {
+    const errDiv = document.createElement('div');
+    errDiv.id = 'js-error-banner';
+    errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:12px;font-size:14px;z-index:99999;font-family:monospace;display:none';
+    document.body.prepend(errDiv);
+    window.addEventListener('error', function(e) {
+        errDiv.textContent = 'JS Error: ' + (e.message || e.error || 'unknown');
+        errDiv.style.display = 'block';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+        errDiv.textContent = 'Unhandled Promise: ' + (e.reason || 'unknown');
+        errDiv.style.display = 'block';
+    });
+})();
+
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = (window.__TAURI__ !== undefined)
     ? 'wss://scripturecast.onrender.com/ws'
@@ -9,20 +24,15 @@ const WS_URL = (window.__TAURI__ !== undefined)
 
 const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
 
-// ── Tauri Detection ──────────────────────────────────────
-function isTauri() {
-    return !!(window.__TAURI_INTERNALS__);
-}
-
 async function tauriInvoke(cmd, args) {
-    if (!isTauri()) throw new Error('Not in Tauri context');
+    if (!window.__TAURI_INTERNALS__) throw new Error('Not in Tauri context');
     return window.__TAURI__.core.invoke(cmd, args);
 }
 
 let whisperStatus = null;
 
 async function checkWhisperStatus() {
-    if (!isTauri()) return null;
+    if (!window.__TAURI_INTERNALS__) return null;
     try {
         whisperStatus = await tauriInvoke('check_whisper');
         return whisperStatus;
@@ -73,13 +83,38 @@ let _activeScripture = null;
 // ── WebSocket ──────────────────────────────────────────────
 let _reconnectTimer = null;
 
-function connect() {
+async function getToken() {
+    // localStorage is fastest and set by auth.js on login — check it first
+    const local = localStorage.getItem('token');
+    if (local) return local;
+
+    // Fall back to cookie (set by login response as httponly)
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+    if (cookie) return cookie;
+
+    // Last resort: Tauri persistent store (for restarts, etc.)
+    if (window.__TAURI__) {
+        try {
+            return await window.__TAURI__.core.invoke('get_auth_token');
+        } catch(e) {
+            console.log('Tauri store failed', e);
+        }
+    }
+    return null;
+}
+
+async function connect() {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         return;
     }
 
     setConnectionStatus('connecting');
-    const token = localStorage.getItem('token');
+    let token;
+    try {
+        token = await getToken();
+    } catch {
+        token = null;
+    }
     const urlWithToken = token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
     socket = new WebSocket(urlWithToken);
 
@@ -183,9 +218,7 @@ function hasSpeechSupport() {
 
 function setLiveLabel(show) {
     micLiveLabel.classList.toggle('active', show);
-    if (show && isTauri() && whisperStatus?.available) {
-        micLiveLabel.textContent = 'Local Whisper ●';
-    } else if (show) {
+    if (show) {
         micLiveLabel.textContent = 'Live ●';
     } else {
         micLiveLabel.textContent = 'Mic';
@@ -384,21 +417,14 @@ function initSpeechRecognition() {
         return;
     }
 
-    if (isTauri()) {
+    if (!!(window.__TAURI_INTERNALS__)) {
         checkWhisperStatus().then(status => {
-            if (status?.available) {
-                micToggleBtn.title = 'Click to start recording (Local Whisper)';
-                appendStatusMessage('Local Whisper transcription ready');
-            } else if (status?.sidecar_exists) {
+            if (!status?.available && status?.sidecar_exists) {
                 micToggleBtn.title = 'Whisper model missing — click to download';
-            } else {
-                // whisper-cli not bundled — fall back to server transcription
-                appendStatusMessage('Local Whisper not available. Using server transcription.');
             }
         });
-    } else {
-        micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
     }
+    micToggleBtn.title = 'Click to start live sermon transcription (AssemblyAI)';
     initContinuousNote();
 }
 
@@ -517,12 +543,10 @@ async function startRecording() {
         };
 
     } catch (err) {
-        console.error('Failed to start live transcription:', err);
-        alert(`Error starting microphone: ${err.message}`);
-        micToggleBtn.classList.remove('connecting', 'active');
-        isRecording = false;
-        setLiveLabel(false);
-        showTextFallback();
+        alert('Recording error: ' + err.message);
+        console.error('Recording error:', err);
+        micToggleBtn.classList.remove('connecting');
+        micToggleBtn.title = 'Click to start recording';
     }
 }
 
@@ -569,19 +593,12 @@ function stopRecording() {
 }
 
 function toggleRecording() {
-    const useWhisper = isTauri() && whisperStatus?.available;
-    if (useWhisper) {
-        if (isWhisperRecording) {
-            stopWhisperRecording();
-        } else {
-            startWhisperRecording();
-        }
+    if (isRecording) {
+        stopRecording();
+    } else if (isWhisperRecording) {
+        stopWhisperRecording();
     } else {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
+        startRecording();
     }
 }
 
@@ -908,9 +925,12 @@ const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         try {
-            await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
+            await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
         } catch { }
         localStorage.removeItem('token');
+        if (window.__TAURI__) {
+            try { await window.__TAURI__.core.invoke('remove_auth_token'); } catch { }
+        }
         window.location.href = '/';
     });
 }
@@ -972,7 +992,7 @@ function appendStatusMessage(text) {
 const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 
 async function downloadWhisperModel() {
-    if (!isTauri()) return;
+    if (!window.__TAURI_INTERNALS__) return;
     micToggleBtn.disabled = true;
     micToggleBtn.title = 'Downloading model…';
     micToggleBtn.classList.add('connecting');
@@ -1022,12 +1042,301 @@ async function downloadWhisperModel() {
     }
 }
 
+// ── Display / Projector Detection ──────────────────────────
+async function getDisplays() {
+    if (window.__TAURI_INTERNALS__) {
+        try {
+            return await tauriInvoke('get_displays');
+        } catch { return []; }
+    }
+    if (window.screen.isExtended && navigator.getScreenDetails) {
+        try {
+            const d = await navigator.getScreenDetails();
+            return d.screens.map(s => ({
+                name: s.label,
+                x: s.availLeft,
+                y: s.availTop,
+                width: s.availWidth,
+                height: s.availHeight,
+                is_primary: s.isPrimary,
+            }));
+        } catch { }
+    }
+    return [{
+        name: 'Primary display',
+        x: screenLeft || 0,
+        y: screenTop || 0,
+        width: screen.availWidth,
+        height: screen.availHeight,
+        is_primary: true,
+    }];
+}
+
+let displayWatchInterval = null;
+
+function startDisplayWatch() {
+    if (window.__TAURI_INTERNALS__) {
+        let known = 0;
+        displayWatchInterval = setInterval(async () => {
+            try {
+                const list = await tauriInvoke('get_displays');
+                if (known === 0) { known = list.length; return; }
+                if (list.length > known) {
+                    known = list.length;
+                    const ext = list.find(d => !d.is_primary);
+                    showProjectorToast('info',
+                        `Display detected${ext ? `: "${ext.name || 'HDMI projector'}"` : ''}. ` +
+                        'Click "Open Projector Screen" to use it.');
+                }
+            } catch { }
+        }, 3000);
+        return;
+    }
+    if (navigator.getScreenDetails) {
+        navigator.getScreenDetails().then(d => {
+            let known = d.screens.length;
+            d.onscreenschange = () => {
+                if (d.screens.length > known) {
+                    known = d.screens.length;
+                    showProjectorToast('info',
+                        'New display detected. Click "Open Projector Screen" to use it.');
+                }
+            };
+        }).catch(() => { });
+    }
+    if (window.screen.isExtended) {
+        showProjectorToast('info',
+            'Multiple displays detected. Click "Open Projector Screen" for the projector.');
+    }
+}
+
+// ── Projector Screen Management ────────────────────────────
+// Tauri-specific state
+let projectorOpen = false;
+let identifying = false;
+
+// Browser fallback state
+let projectorWindow = null;
+let projectorCheckInterval = null;
+
+// ── Tauri: Display enumeration ──
+async function loadDisplays() {
+    if (!window.__TAURI_INTERNALS__) return;
+    try {
+        const displays = await tauriInvoke('get_available_displays');
+        const select = document.getElementById('display-select');
+        if (!select) return;
+        select.innerHTML = '';
+
+        const autoOpt = document.createElement('option');
+        autoOpt.value = '';
+        autoOpt.textContent = 'Auto-Detect (secondary display)';
+        select.appendChild(autoOpt);
+
+        for (const d of displays) {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            const label = d.name ? d.name : `Display ${d.id.replace('display-', '')}`;
+            opt.textContent = `${label} — ${d.width}×${d.height}${d.is_primary ? ' (Primary)' : ''}`;
+            if (!d.is_primary) opt.selected = true;
+            select.appendChild(opt);
+        }
+    } catch (e) {
+        console.error('Failed to load displays:', e);
+    }
+}
+
+// ── Tauri: Identify displays ──
+async function identifyDisplays() {
+    if (!window.__TAURI_INTERNALS__ || identifying) return;
+    identifying = true;
+    const btn = document.getElementById('identify-displays-btn');
+    if (btn) btn.style.opacity = '0.5';
+    try {
+        await tauriInvoke('identify_displays');
+    } catch (e) {
+        console.error('Identify failed:', e);
+    }
+    identifying = false;
+    if (btn) btn.style.opacity = '1';
+}
+
+// ── Tauri: Open projector on selected display ──
+async function openProjectorOnDisplay() {
+    const btn = document.getElementById('open-projector-btn');
+    if (!btn) return;
+    btn.classList.add('loading');
+
+    try {
+        const select = document.getElementById('display-select');
+        let displayId = select ? select.value : '';
+
+        if (!displayId) {
+            const displays = await tauriInvoke('get_available_displays');
+            const secondary = displays.find(d => !d.is_primary);
+            displayId = secondary ? secondary.id : (displays[0] ? displays[0].id : 'display-1');
+        }
+
+        await tauriInvoke('open_projector_on_display', { displayId });
+        projectorOpen = true;
+        updateOutputsButton(true);
+        showProjectorToast('success', 'Projector opened on selected display');
+    } catch (e) {
+        showProjectorToast('error', `Failed to open projector: ${e}`);
+    } finally {
+        btn.classList.remove('loading');
+    }
+}
+
+// ── Tauri: Close projector ──
+async function closeProjectorWindow() {
+    try {
+        await tauriInvoke('close_projector_window');
+    } catch (e) {
+        console.warn('Error closing projector:', e);
+    }
+    projectorOpen = false;
+    updateOutputsButton(false);
+    showProjectorToast('info', 'Projector screen closed');
+}
+
+// ── Update the outputs open-projector-btn ──
+function updateOutputsButton(isOpen) {
+    const btn = document.getElementById('open-projector-btn');
+    if (!btn) return;
+    const label = btn.querySelector('.btn-label');
+    if (!label) return;
+    if (isOpen) {
+        label.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg> Close Projector';
+        btn.className = 'btn btn-danger';
+    } else {
+        label.innerHTML = 'Open Projector Screen';
+        btn.className = 'btn btn-secondary';
+    }
+}
+
+// ── Browser fallback: open via popup ──
+async function openProjectorScreen() {
+    if (projectorWindow) {
+        await closeProjectorScreen();
+        return;
+    }
+
+    const popup = window.open('/screen', 'ScriptureCast Projector',
+        'width=1920,height=1080,left=0,top=0');
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        showProjectorToast('error', 'Popup blocked. Please allow popups for this site to open the projector screen.');
+        return;
+    }
+    projectorWindow = popup;
+    updateBrowserButton(true);
+    showProjectorToast('info', 'Drag the projector window to your HDMI screen and press F11 for fullscreen');
+
+    if (projectorCheckInterval) clearInterval(projectorCheckInterval);
+    projectorCheckInterval = setInterval(() => {
+        if (projectorWindow && projectorWindow.closed) {
+            projectorWindow = null;
+            clearInterval(projectorCheckInterval);
+            projectorCheckInterval = null;
+            updateBrowserButton(false);
+        }
+    }, 1000);
+
+    getDisplays().then(displays => {
+        if (!projectorWindow || projectorWindow.closed) return;
+        const secondary = displays.find(d => !d.is_primary) || displays[0] || {};
+        const w = secondary.width || 1920;
+        const h = secondary.height || 1080;
+        const left = secondary.x || 0;
+        const top = secondary.y || 0;
+        try {
+            projectorWindow.resizeTo(w, h);
+            projectorWindow.moveTo(left, top);
+        } catch { }
+        if (secondary && !secondary.is_primary) {
+            showProjectorToast('success', `Projector positioned on "${secondary.name || 'secondary display'}" (${w}x${h})`);
+        }
+    });
+}
+
+async function closeProjectorScreen() {
+    if (projectorWindow && !projectorWindow.closed) {
+        projectorWindow.close();
+    }
+    projectorWindow = null;
+    if (projectorCheckInterval) {
+        clearInterval(projectorCheckInterval);
+        projectorCheckInterval = null;
+    }
+    updateBrowserButton(false);
+    showProjectorToast('info', 'Projector screen closed');
+}
+
+function updateBrowserButton(isOpen) {
+    const btn = document.getElementById('open-screen-btn');
+    if (!btn) return;
+    if (isOpen) {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg> Close Projector';
+        btn.className = 'btn btn-danger';
+    } else {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg> Open Projector Screen';
+        btn.className = 'btn btn-secondary';
+    }
+}
+
+function showProjectorToast(type, message) {
+    let toast = document.getElementById('projector-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'projector-toast';
+        toast.innerHTML = '<span id="projector-toast-msg"></span><button id="projector-toast-close">&times;</button>';
+        document.body.appendChild(toast);
+
+        document.getElementById('projector-toast-close').addEventListener('click', () => {
+            toast.classList.add('hidden');
+        });
+    }
+
+    toast.className = '';
+    if (type === 'error') toast.classList.add('error');
+    document.getElementById('projector-toast-msg').textContent = message;
+    toast.classList.remove('hidden');
+}
+
+// ── Event Listeners ──
+// Browser fallback button
+document.getElementById('open-screen-btn').addEventListener('click', openProjectorScreen);
+
+// Tauri-specific outputs section
+if (window.__TAURI_INTERNALS__) {
+    const outputsSection = document.getElementById('outputs-section');
+    if (outputsSection) outputsSection.classList.remove('hidden');
+
+    document.getElementById('refresh-displays-btn')?.addEventListener('click', loadDisplays);
+    document.getElementById('identify-displays-btn')?.addEventListener('click', identifyDisplays);
+    document.getElementById('open-projector-btn')?.addEventListener('click', async () => {
+        if (projectorOpen) {
+            await closeProjectorWindow();
+        } else {
+            await openProjectorOnDisplay();
+        }
+    });
+
+    // Hide browser fallback in Tauri
+    const previewActions = document.getElementById('preview-actions');
+    if (previewActions) previewActions.classList.add('hidden');
+
+    loadDisplays();
+}
+
+startDisplayWatch();
+
 // ── Boot ───────────────────────────────────────────────────
 connect();
 initContinuousNote();
 initSpeechRecognition();
 
-if (isTauri()) {
+if (!!(window.__TAURI_INTERNALS__)) {
     checkWhisperStatus().then(status => {
         if (status?.available) {
             micToggleBtn.title = 'Click to start recording (Local Whisper)';
