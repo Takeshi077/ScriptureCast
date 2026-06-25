@@ -972,3 +972,77 @@ input[type="number"] { width: 70px; text-align: center; }
 .verse-num-preview:first-child {
     margin-left: 0;
 }
+
+/* ============================================================
+   RESPONSIVE LAYOUT
+   ============================================================ */
+@media (max-width: 992px) {
+    #main-grid {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        top: 60px;
+        bottom: auto;
+        height: auto;
+        overflow: visible;
+    }
+    
+    html, body {
+        overflow: auto;
+    }
+
+    #panel-transcript,
+    #panel-center,
+    #panel-preview {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        min-height: 450px;
+        max-height: none;
+        flex: none;
+        overflow: visible;
+    }
+    
+    /* Make internal areas scrollable or allow them to grow */
+    #transcript-feed, #candidates-list, #quote-detection-body, #detected-quotes-list {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    #panel-preview {
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #app-header {
+        padding: 0 12px;
+    }
+
+    #brand-name {
+        display: none;
+    }
+    
+    #conn-label {
+        display: none;
+    }
+    
+    #header-controls {
+        gap: 8px;
+    }
+    
+    #translation-group label {
+        display: none;
+    }
+
+    #clear-btn, #logout-btn {
+        font-size: 0;
+        padding: 8px;
+        gap: 0;
+    }
+    
+    #clear-btn svg, #logout-btn svg {
+        margin: 0;
+        width: 18px;
+        height: 18px;
+    }
+}
