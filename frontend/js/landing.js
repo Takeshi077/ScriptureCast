@@ -1,7 +1,50 @@
 /**
- * ScriptureCast — Landing Page Carousel Controller
- * Cycles through Bible verses infinitely with smooth fade-slide transitions.
+ * ScriptureCast — Landing Page Carousel Controller + OS Detection
  */
+
+/* ── Download OS Detection ── */
+function initDownload() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    let detected = 'windows';
+
+    if (userAgent.includes('mac os') || userAgent.includes('macintosh')) {
+        detected = 'macos';
+    } else if (userAgent.includes('linux') && !userAgent.includes('android')) {
+        detected = 'linux';
+    }
+
+    const cards = document.querySelectorAll('.download-card');
+    cards.forEach(card => {
+        if (card.dataset.os === detected) {
+            card.classList.add('highlight');
+        }
+    });
+
+    const buttons = document.querySelectorAll('.download-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const platform = btn.dataset.platform;
+
+            try {
+                const res = await fetch('https://api.github.com/repos/Takeshi077/ScriptureCast/releases/latest');
+                if (res.ok) {
+                    const data = await res.json();
+                    const asset = data.assets.find(a => a.name.toLowerCase().includes(platform));
+                    if (asset) {
+                        window.location.href = asset.browser_download_url;
+                        return;
+                    }
+                }
+            } catch {}
+
+            btn.textContent = 'Coming Soon';
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.5';
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const slides = document.querySelectorAll('.carousel-slide');
     const track = document.querySelector('.carousel-track');
@@ -58,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     track.addEventListener('focusin', stopRotation);
     track.addEventListener('focusout', startRotation);
+
+    // Download OS detection
+    initDownload();
 
     // Mobile menu toggle
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
