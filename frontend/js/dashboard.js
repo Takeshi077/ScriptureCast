@@ -1308,7 +1308,7 @@ function showProjectorToast(type, message) {
 document.getElementById('open-screen-btn').addEventListener('click', openProjectorScreen);
 
 // Tauri-specific outputs section
-if (window.__TAURI_INTERNALS__) {
+if (window.__TAURI__) {
     const outputsSection = document.getElementById('outputs-section');
     if (outputsSection) outputsSection.classList.remove('hidden');
 
