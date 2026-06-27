@@ -1,6 +1,6 @@
 [package]
 name = "scripturecast-tauri"
-version = "0.1.0"
+version = "0.1.1"
 description = "ScriptureCast — Church Projection System"
 authors = ["ScriptureCast Team"]
 edition = "2021"
