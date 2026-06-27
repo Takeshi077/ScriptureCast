@@ -23,8 +23,13 @@ function initDownload() {
     const buttons = document.querySelectorAll('.download-btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            e.preventDefault();
             const platform = btn.dataset.platform;
+
+            // Windows uses direct local link (set in href)
+            if (platform === 'windows') return;
+
+            // macOS/Linux: try GitHub releases
+            e.preventDefault();
 
             try {
                 const res = await fetch('https://api.github.com/repos/Takeshi077/ScriptureCast/releases/latest');
