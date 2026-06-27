@@ -5,11 +5,10 @@ data/users.db
 # ML/embedding data (generated)
 data/embeddings/
 
-# Build output / installers (except tracked release files)
+# Build output / installers
 *.exe
 *.msi
-!/frontend/downloads/*.exe
-!/frontend/downloads/*.msi
+frontend/downloads/
 
 # Node.js dependencies (install via npm)
 node_modules/
