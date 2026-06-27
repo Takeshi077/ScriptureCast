@@ -493,6 +493,13 @@ async function startRecording() {
             source.connect(scriptProcessor);
             scriptProcessor.connect(silentGain);
             silentGain.connect(audioContext.destination);
+
+            clearMicErrors();
+            showProjectorToast('success', 'Microphone reconnected');
+            setTimeout(() => {
+                const toast = document.getElementById('projector-toast');
+                if (toast) toast.classList.add('hidden');
+            }, 2000);
         };
 
         aaiWs.onmessage = (event) => {
@@ -530,14 +537,14 @@ async function startRecording() {
 
         aaiWs.onerror = (err) => {
             console.error('AssemblyAI WebSocket error:', err);
-            appendStatusMessage('Live transcription connection failed. Check console for details.');
+            appendMicError('Microphone disconnected. Reconnecting...');
             stopRecording();
         };
 
         aaiWs.onclose = (event) => {
             console.log('AssemblyAI WebSocket closed:', event.code, event.reason);
             if (isRecording) {
-                appendStatusMessage('Live transcription disconnected unexpectedly.');
+                appendMicError('Microphone disconnected. Reconnecting...');
                 stopRecording();
             }
         };
@@ -988,6 +995,18 @@ function appendStatusMessage(text) {
     transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 }
 
+function appendMicError(text) {
+    const el = document.createElement('p');
+    el.className = 'status-message mic-error';
+    el.textContent = text;
+    transcriptFeed.appendChild(el);
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+}
+
+function clearMicErrors() {
+    transcriptFeed.querySelectorAll('.mic-error').forEach(el => el.remove());
+}
+
 // ── Model Download ──────────────────────────────────────────
 const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 
@@ -1299,6 +1318,7 @@ function showProjectorToast(type, message) {
 
     toast.className = '';
     if (type === 'error') toast.classList.add('error');
+    else if (type === 'success') toast.classList.add('success');
     document.getElementById('projector-toast-msg').textContent = message;
     toast.classList.remove('hidden');
 }

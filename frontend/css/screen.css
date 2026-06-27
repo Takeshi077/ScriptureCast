@@ -41,9 +41,9 @@ html, body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     flex-shrink: 0;
-    padding: 1.5vh 0 0.5vh;
+    padding: 12vh 0 0.5vh;
 
-    font-size: clamp(1.8rem, 4vh, 4.5rem);
+    font-size: clamp(2rem, 4vw, 4rem);
     line-height: 1.1;
     overflow: visible;
     word-break: break-word;
@@ -59,7 +59,7 @@ html, body {
     flex: 1;
     min-height: 0;
 
-    font-size: clamp(3rem, 6vw, 6rem);
+    font-size: clamp(3.5rem, 7vw, 7rem);
     line-height: 1.4;
     padding: 0.5vh 2% 1vh;
 }
@@ -79,23 +79,25 @@ html, body {
 /* Landscape orientation */
 @media (orientation: landscape) and (min-width: 1200px) {
     #reference {
-        font-size: clamp(2rem, 5vh, 5rem);
+        font-size: clamp(2rem, 4vw, 4rem);
+        padding: 12vh 0 0.8vh;
     }
     #scripture-text {
-        font-size: clamp(3rem, 5vw, 7rem);
+        font-size: clamp(3.5rem, 6vw, 7rem);
         line-height: 1.4;
-        padding: 0.5vh 4% 1vh;
+        padding: 1vh 4% 1vh;
     }
 }
 
 /* Portrait / smaller screens */
 @media (orientation: portrait), (max-width: 800px) {
     #reference {
-        font-size: clamp(1.5rem, 4vh, 2.8rem);
+        font-size: clamp(1.5rem, 4vw, 2.5rem);
+        padding: 8vh 0 0.5vh;
         letter-spacing: 0.08em;
     }
     #scripture-text {
-        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-size: clamp(2rem, 6vw, 3.5rem);
         line-height: 1.4;
     }
 }
@@ -103,10 +105,13 @@ html, body {
 
 /* Ultra-wide / cinema screens */
 @media (min-width: 2000px) {
+    #reference {
+        padding: 12vh 0 1vh;
+    }
     #scripture-text {
-        font-size: clamp(3rem, 5vw, 7rem);
+        font-size: clamp(3.5rem, 5vw, 7rem);
         line-height: 1.4;
-        padding: 0.5vh 10% 1vh;
+        padding: 1vh 10% 1vh;
     }
 }
 

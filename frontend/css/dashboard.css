@@ -1046,6 +1046,10 @@ input[type="number"] { width: 70px; text-align: center; }
     border-color: var(--danger);
     background: var(--danger-dim);
 }
+#projector-toast.success {
+    border-color: var(--success);
+    background: var(--success-dim);
+}
 #projector-toast.hidden {
     display: none;
 }
