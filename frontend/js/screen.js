@@ -175,6 +175,7 @@ function updateDisplay(activeScripture) {
         navEl.classList.add('hidden');
     }
 
+    adjustTextSize();
     textEl.scrollTop = 0;
     container.classList.remove('hidden');
     requestAnimationFrame(() => {
@@ -189,6 +190,7 @@ function goToPrevVerse() {
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
     renderSingleVerse(verses[currentVerseIndex], _activeScripture.book, _activeScripture.chapter);
     updateNavigation(verses.length);
+    adjustTextSize();
     textEl.scrollTop = 0;
 }
 
@@ -199,6 +201,7 @@ function goToNextVerse() {
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
     renderSingleVerse(verses[currentVerseIndex], _activeScripture.book, _activeScripture.chapter);
     updateNavigation(verses.length);
+    adjustTextSize();
     textEl.scrollTop = 0;
 }
 
@@ -225,6 +228,29 @@ function hideDisplay() {
 
 function safeJson(str) {
     try { return JSON.parse(str); } catch { return null; }
+}
+
+function adjustTextSize() {
+    textEl.style.fontSize = '';
+    textEl.classList.remove('long-text');
+
+    const totalChars = textEl.textContent.length;
+    if (totalChars > 200) {
+        textEl.classList.add('long-text');
+    }
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            let fontSize = parseFloat(window.getComputedStyle(textEl).fontSize);
+            if (isNaN(fontSize) || fontSize <= 0) return;
+            let safety = 0;
+            while (textEl.scrollHeight > textEl.clientHeight + 1 && safety < 200 && fontSize > 10) {
+                fontSize -= 0.5;
+                textEl.style.fontSize = fontSize + 'px';
+                safety++;
+            }
+        });
+    });
 }
 
 connect();

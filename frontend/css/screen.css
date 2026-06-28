@@ -43,7 +43,7 @@ html, body {
     flex-shrink: 0;
     padding: 12vh 0 0.5vh;
 
-    font-size: clamp(2rem, 4vw, 4rem);
+    font-size: clamp(1.5rem, 3vw, 3rem);
     line-height: 1.1;
     overflow: visible;
     word-break: break-word;
@@ -55,36 +55,23 @@ html, body {
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
     max-width: 100%;
     word-wrap: break-word;
-    overflow-y: auto;
     flex: 1;
     min-height: 0;
 
-    font-size: clamp(3.5rem, 7vw, 7rem);
-    line-height: 1.4;
+    font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+    line-height: 1.25;
     padding: 0.5vh 2% 1vh;
-}
-
-/* Scrollbar styling */
-#scripture-text::-webkit-scrollbar {
-    width: 4px;
-}
-#scripture-text::-webkit-scrollbar-track {
-    background: transparent;
-}
-#scripture-text::-webkit-scrollbar-thumb {
-    background: rgba(56, 189, 248, 0.3);
-    border-radius: 99px;
 }
 
 /* Landscape orientation */
 @media (orientation: landscape) and (min-width: 1200px) {
     #reference {
-        font-size: clamp(2rem, 4vw, 4rem);
+        font-size: clamp(1.5rem, 3vw, 3rem);
         padding: 12vh 0 0.8vh;
     }
     #scripture-text {
-        font-size: clamp(3.5rem, 6vw, 7rem);
-        line-height: 1.4;
+        font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+        line-height: 1.25;
         padding: 1vh 4% 1vh;
     }
 }
@@ -92,13 +79,13 @@ html, body {
 /* Portrait / smaller screens */
 @media (orientation: portrait), (max-width: 800px) {
     #reference {
-        font-size: clamp(1.5rem, 4vw, 2.5rem);
+        font-size: clamp(1.2rem, 3.5vw, 2rem);
         padding: 8vh 0 0.5vh;
         letter-spacing: 0.08em;
     }
     #scripture-text {
-        font-size: clamp(2rem, 6vw, 3.5rem);
-        line-height: 1.4;
+        font-size: clamp(1.8rem, 5vw, 3rem);
+        line-height: 1.25;
     }
 }
 
@@ -109,9 +96,29 @@ html, body {
         padding: 12vh 0 1vh;
     }
     #scripture-text {
-        font-size: clamp(3.5rem, 5vw, 7rem);
-        line-height: 1.4;
+        font-size: clamp(2.5rem, 4vw, 5.5rem);
+        line-height: 1.25;
         padding: 1vh 10% 1vh;
+    }
+}
+
+/* Long verse text - reduced size for longer content (200+ chars) */
+#scripture-text.long-text {
+    font-size: clamp(1.4rem, 2.5vw, 3rem);
+}
+@media (orientation: landscape) and (min-width: 1200px) {
+    #scripture-text.long-text {
+        font-size: clamp(1.4rem, 2.5vw, 3rem);
+    }
+}
+@media (orientation: portrait), (max-width: 800px) {
+    #scripture-text.long-text {
+        font-size: clamp(1rem, 3.5vw, 2rem);
+    }
+}
+@media (min-width: 2000px) {
+    #scripture-text.long-text {
+        font-size: clamp(1.4rem, 2vw, 3rem);
     }
 }
 
