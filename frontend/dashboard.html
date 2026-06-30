@@ -148,6 +148,24 @@
                 </button>
             </div>
 
+            <!-- ===== IMAGES SECTION ===== -->
+            <div id="images-section" class="card">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+                        Images
+                    </h2>
+                </div>
+                <div id="images-upload-area">
+                    <label id="images-upload-label" class="upload-label">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                        Upload Image
+                    </label>
+                    <input id="images-file-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+                </div>
+                <div id="images-gallery"></div>
+            </div>
+
             <!-- ===== OUTPUTS / DISPLAY SELECTION (Tauri only) ===== -->
             <div id="outputs-section" class="hidden">
                 <div class="outputs-header">

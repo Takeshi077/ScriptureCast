@@ -70,6 +70,11 @@ const textInputArea = document.getElementById('text-input-area');
 const textInput = document.getElementById('text-input');
 const textSendBtn = document.getElementById('text-send-btn');
 
+// Image upload DOM
+const imagesFileInput = document.getElementById('images-file-input');
+const imagesGallery = document.getElementById('images-gallery');
+const imagesUploadLabel = document.getElementById('images-upload-label');
+
 // ── State ──────────────────────────────────────────────────
 let socket = null;
 let currentCandidates = [];
@@ -78,6 +83,8 @@ let interimText = '';
 let transcriptNote = null;
 let currentVerseIndex = 0;
 let _activeScripture = null;
+let uploadedImages = [];
+let _activeImage = null;
 
 
 // ── WebSocket ──────────────────────────────────────────────
@@ -619,8 +626,9 @@ function handleStateUpdate(state) {
     }
 
     _activeScripture = state.active_scripture;
+    _activeImage = state.active_image;
     currentVerseIndex = state.current_verse_index ?? 0;
-    updateProjectorPreview(state.active_scripture);
+    updateProjectorPreview(state.active_scripture, state.active_image);
 
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
@@ -818,7 +826,16 @@ function handleManualVerseResult(msg) {
 }
 
 // ── Projector Preview Update ───────────────────────────────
-function updateProjectorPreview(activeScripture) {
+function updateProjectorPreview(activeScripture, activeImage) {
+    if (activeImage && !activeScripture) {
+        previewRef.textContent = 'Image';
+        previewText.innerHTML = `<img src="${escHtml(activeImage)}" style="max-width:100%;max-height:120px;border-radius:6px;object-fit:contain;margin-top:6px;">`;
+        displayStatus.className = 'status-badge status-on';
+        displayStatus.innerHTML = '<span class="status-dot"></span> Image';
+        dashNavEl.classList.add('hidden');
+        return;
+    }
+
     if (!activeScripture) {
         previewRef.textContent = '—';
         previewText.textContent = 'Nothing on display';
@@ -897,7 +914,7 @@ function goToPrevVerse() {
     if (!verses || verses.length <= 1 || currentVerseIndex <= 0) return;
     currentVerseIndex--;
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
-    updateProjectorPreview(_activeScripture);
+    updateProjectorPreview(_activeScripture, _activeImage);
 }
 
 function goToNextVerse() {
@@ -905,7 +922,7 @@ function goToNextVerse() {
     if (!verses || verses.length <= 1 || currentVerseIndex >= verses.length - 1) return;
     currentVerseIndex++;
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
-    updateProjectorPreview(_activeScripture);
+    updateProjectorPreview(_activeScripture, _activeImage);
 }
 
 dashPrevBtn.addEventListener('click', goToPrevVerse);
@@ -1349,7 +1366,85 @@ if (window.__TAURI__) {
     loadDisplays();
 }
 
+// ── Image Upload & Gallery ─────────────────────────────────
+async function uploadImage(file) {
+    imagesUploadLabel.textContent = 'Uploading…';
+    imagesUploadLabel.style.opacity = '0.6';
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch(`${BASE_URL}/api/upload-image`, { method: 'POST', body: formData });
+        if (!resp.ok) throw new Error(`Upload failed: ${resp.statusText}`);
+        const data = await resp.json();
+        uploadedImages.unshift({ url: data.url, filename: data.filename });
+        renderImageGallery();
+    } catch (err) {
+        appendStatusMessage(`Image upload error: ${err.message}`);
+    } finally {
+        imagesUploadLabel.textContent = 'Upload Image';
+        imagesUploadLabel.style.opacity = '1';
+    }
+}
+
+function renderImageGallery() {
+    imagesGallery.innerHTML = '';
+    if (uploadedImages.length === 0) {
+        imagesGallery.innerHTML = '<p class="placeholder-text" style="padding:12px;text-align:center;font-size:12px;color:var(--text-muted);">No images uploaded yet</p>';
+        return;
+    }
+    uploadedImages.forEach(img => {
+        const item = document.createElement('div');
+        item.className = 'image-gallery-item';
+        item.innerHTML = `
+            <img src="${escHtml(img.url)}" loading="lazy" class="image-thumb">
+            <div class="image-actions">
+                <button class="btn btn-primary btn-sm image-display-btn" data-url="${escHtml(img.url)}">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                    Display
+                </button>
+                <button class="btn btn-secondary btn-sm image-clear-btn" data-url="${escHtml(img.url)}">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    Clear
+                </button>
+            </div>
+        `;
+        item.querySelector('.image-display-btn').addEventListener('click', () => {
+            send({ type: 'display_image', image_url: img.url });
+            showProjectorToast('success', 'Image sent to projector');
+        });
+        item.querySelector('.image-clear-btn').addEventListener('click', () => {
+            send({ type: 'clear_image' });
+            showProjectorToast('info', 'Image cleared from projector');
+        });
+        imagesGallery.appendChild(item);
+    });
+}
+
+async function loadUploadedImages() {
+    try {
+        const resp = await fetch(`${BASE_URL}/api/images`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        uploadedImages = data.images || [];
+        renderImageGallery();
+    } catch { }
+}
+
+imagesFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        uploadImage(file);
+        imagesFileInput.value = '';
+    }
+});
+
+imagesUploadLabel.addEventListener('click', (e) => {
+    e.preventDefault();
+    imagesFileInput.click();
+});
+
 startDisplayWatch();
+loadUploadedImages();
 
 // ── Boot ───────────────────────────────────────────────────
 connect();

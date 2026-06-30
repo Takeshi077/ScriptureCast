@@ -7,6 +7,7 @@ const WS_URL = !!(window.__TAURI_INTERNALS__)
 const container = document.getElementById('display-container');
 const referenceEl = document.getElementById('reference');
 const textEl = document.getElementById('scripture-text');
+const imageEl = document.getElementById('screen-image');
 const navEl = document.getElementById('screen-navigation');
 const prevBtn = document.getElementById('screen-prev-btn');
 const nextBtn = document.getElementById('screen-next-btn');
@@ -68,7 +69,7 @@ async function connect() {
             _lastState = msg;
             currentVerseIndex = msg.current_verse_index ?? 0;
             _activeScripture = msg.active_scripture;
-            updateDisplay(msg.active_scripture);
+            updateDisplay(msg.active_scripture, msg.active_image);
         }
     };
 
@@ -144,13 +145,35 @@ function updateNavigation(versesLength) {
     nextBtn.disabled = currentVerseIndex === versesLength - 1;
 }
 
-function updateDisplay(activeScripture) {
+function updateDisplay(activeScripture, activeImage) {
     if (displayTimeout) {
         clearTimeout(displayTimeout);
         displayTimeout = null;
     }
 
+    // Image display takes priority only when no active scripture
+    if (activeImage && !activeScripture) {
+        imageEl.src = activeImage;
+        referenceEl.style.display = 'none';
+        textEl.style.display = 'none';
+        navEl.classList.add('hidden');
+        container.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            imageEl.classList.add('visible');
+            container.classList.add('visible');
+        });
+        _activeScripture = null;
+        return;
+    }
+
+    // Hide image with fade when scripture is showing
+    imageEl.classList.remove('visible');
+    referenceEl.style.display = '';
+    textEl.style.display = '';
+
     if (!activeScripture) {
+        imageEl.classList.remove('visible');
+        imageEl.src = '';
         container.classList.remove('visible');
         container.classList.add('hidden');
         navEl.classList.add('hidden');

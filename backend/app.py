@@ -1,11 +1,12 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 import asyncio
 import json
 import os
 import time
 import tempfile
+import uuid
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
 from .semantic import might_be_quote
@@ -52,6 +53,7 @@ DEFAULT_STATE = {
     "current_translation": "KJV",
     "display_duration": 15,
     "active_scripture": None,
+    "active_image": None,
     "recent_transcripts": [],
     "full_transcript": "",
     "context_book": None,
@@ -69,6 +71,7 @@ async def set_active_scripture(scripture_data, user_id):
     state = get_state(user_id)
     state["active_scripture"] = scripture_data
     state["current_verse_index"] = 0
+    state["active_image"] = None
 
     if scripture_data is not None and scripture_data.get("book"):
         state["context_book"] = scripture_data["book"]
@@ -126,6 +129,7 @@ async def broadcast_state(user_id):
         "current_translation": state["current_translation"],
         "display_duration": state["display_duration"],
         "active_scripture": state["active_scripture"],
+        "active_image": state.get("active_image"),
         "context_book": state.get("context_book"),
         "context_chapter": state.get("context_chapter"),
         "current_verse_index": state["current_verse_index"],
@@ -246,6 +250,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "current_translation": state["current_translation"],
             "display_duration": state["display_duration"],
             "active_scripture": state["active_scripture"],
+            "active_image": state.get("active_image"),
             "full_transcript": state["full_transcript"],
             "context_book": state.get("context_book"),
             "context_chapter": state.get("context_chapter"),
@@ -263,6 +268,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if msg_type == "clear":
                 await clear_active_scripture(user_id)
+
+            elif msg_type == "display_image":
+                image_url = msg.get("image_url", "")
+                if image_url:
+                    state["active_image"] = image_url
+                    state["active_scripture"] = None
+                    await broadcast_state(user_id)
+
+            elif msg_type == "clear_image":
+                state["active_image"] = None
+                await broadcast_state(user_id)
 
             elif msg_type == "set_translation":
                 state["current_translation"] = msg.get("translation", "KJV")
@@ -336,6 +352,9 @@ async def websocket_endpoint(websocket: WebSocket):
 # Frontend directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+IMAGES_DIR = os.path.join(DATA_DIR, "images")
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
 def _read_html(name):
     path = os.path.join(FRONTEND_DIR, name)
@@ -483,6 +502,43 @@ async def api_transcribe(file: UploadFile = File(...)):
         if tmp and os.path.exists(tmp):
             os.unlink(tmp)
 
+@app.post("/api/upload-image")
+async def api_upload_image(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, GIF, WebP allowed")
+
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(IMAGES_DIR, filename)
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    return {"url": f"/data/images/{filename}", "filename": filename}
+
+@app.get("/api/images")
+async def api_list_images():
+    files = []
+    if os.path.exists(IMAGES_DIR):
+        for fname in os.listdir(IMAGES_DIR):
+            fpath = os.path.join(IMAGES_DIR, fname)
+            if os.path.isfile(fpath):
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+                    files.append({
+                        "url": f"/data/images/{fname}",
+                        "filename": fname,
+                        "size": os.path.getsize(fpath),
+                    })
+    return {"images": sorted(files, key=lambda f: f["filename"], reverse=True)}
+
 # Mount frontend files (css, js, images) at /frontend
 if os.path.exists(FRONTEND_DIR):
     app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+if os.path.exists(DATA_DIR):
+    app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
