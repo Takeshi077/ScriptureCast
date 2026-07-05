@@ -199,7 +199,7 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
     if HAS_SEMANTIC:
         now = time.time()
         last_semantic = state.get("last_semantic_search", 0.0)
-        if now - last_semantic >= 5.0:
+        if now - last_semantic >= 2.0:
             state["last_semantic_search"] = now
             top_k = 3 if candidates else 5
             # Run the CPU-bound TF-IDF + re-ranking off the async event loop
