@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/frontend/css/dashboard.css?v=5">
+    <link rel="stylesheet" href="/frontend/css/dashboard.css?v=6">
     <link rel="icon" href="/frontend/logo.png" type="image/png">
 </head>
 <body>
@@ -45,50 +45,78 @@
     <!-- ===== MAIN LAYOUT ===== -->
     <main id="main-grid">
 
-        <!-- ===== LEFT PANEL: Live Transcript ===== -->
+        <!-- ===== LEFT PANEL: Live Transcript + Verse Lookup ===== -->
         <section id="panel-transcript" aria-labelledby="transcript-heading">
-            <div class="panel-header">
-                <h2 id="transcript-heading">Live Transcript</h2>
-                <div id="mic-controls">
-                    <button id="mic-toggle-btn" class="mic-btn" aria-label="Toggle speech recognition" title="Click to start browser-based speech recognition">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    </button>
-                    <div id="mic-live-label" class="mic-live-label" aria-label="Microphone is listening">
-                        <div class="audio-wave">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                            <span></span>
+
+            <!-- ── Top Half: Live Transcript ── -->
+            <div id="transcript-section">
+                <div class="panel-header">
+                    <h2 id="transcript-heading">Live Transcript</h2>
+                    <div id="mic-controls">
+                        <button id="mic-toggle-btn" class="mic-btn" aria-label="Toggle speech recognition" title="Click to start browser-based speech recognition">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        </button>
+                        <div id="mic-live-label" class="mic-live-label" aria-label="Microphone is listening">
+                            <div class="audio-wave">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div id="transcript-feed" aria-live="polite">
-                <p class="placeholder-text">Waiting for audio input…</p>
-            </div>
-
-            <!-- Fallback text input (shown when speech is unavailable) -->
-            <div id="text-input-area" class="hidden">
-                <textarea id="text-input" placeholder="Type sermon text here (e.g. 'turn to John 3:16')…" rows="2"></textarea>
-                <button id="text-send-btn" class="btn btn-primary">Send</button>
-            </div>
-
-            <!-- Manual Verse Lookup -->
-            <div id="manual-card">
-                <h3>Manual Verse Lookup</h3>
-                <div id="manual-lookup-form">
-                    <input id="manual-input" type="text" placeholder="e.g. Romans 8:28 or Psalm 23:1-3" aria-label="Manual verse reference input">
-                    <button id="manual-lookup-btn" class="btn btn-primary" aria-label="Look up and display verse">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/></svg>
-                        Display
-                    </button>
+                <div id="transcript-feed" aria-live="polite">
+                    <p class="placeholder-text">Waiting for audio input…</p>
                 </div>
-                <div id="lookup-preview" class="hidden">
-                    <div id="lookup-reference-label"></div>
-                    <div id="lookup-text-preview"></div>
+                <div id="text-input-area" class="hidden">
+                    <textarea id="text-input" placeholder="Type sermon text here (e.g. 'turn to John 3:16')…" rows="2"></textarea>
+                    <button id="text-send-btn" class="btn btn-primary">Send</button>
                 </div>
             </div>
+
+            <!-- ── Visible Divider ── -->
+            <div class="section-divider"></div>
+
+            <!-- ── Bottom Half: Manual Verse Lookup + Chapter Browser ── -->
+            <div id="lookup-section">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/></svg>
+                        Verse Lookup
+                    </h2>
+                </div>
+                <div id="manual-card">
+                    <div id="manual-lookup-form">
+                        <input id="manual-input" type="text" placeholder="e.g. Romans 8:28 or Psalm 23:1-3" aria-label="Manual verse reference input">
+                        <button id="manual-lookup-btn" class="btn btn-primary" aria-label="Look up and display verse">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/></svg>
+                            Display
+                        </button>
+                    </div>
+                    <div id="lookup-preview" class="hidden">
+                        <div id="lookup-reference-label"></div>
+                        <div id="lookup-text-preview"></div>
+                    </div>
+                    <!-- Chapter Browser (embedded) -->
+                    <div id="chapter-browser-card" class="hidden">
+                        <div id="chapter-browser-header">
+                            <div id="chapter-nav">
+                                <button id="ch-prev-btn" class="ch-nav-btn" title="Previous chapter" aria-label="Previous chapter">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                </button>
+                                <span id="chapter-title"></span>
+                                <button id="ch-next-btn" class="ch-nav-btn" title="Next chapter" aria-label="Next chapter">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="chapter-verse-list"></div>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <!-- ===== CENTER PANEL: Detected Verses ===== -->
@@ -107,25 +135,6 @@
                 </div>
             </div>
 
-            <!-- Browse Chapter -->
-            <div id="chapter-browser-card" class="card hidden">
-                <div class="panel-header">
-                    <h2>
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.396 0 2.698.362 3.805 1.014A7.968 7.968 0 0114 14.5c1.255 0 2.443.29 3.5.804v-10A7.969 7.969 0 0014 4c-1.396 0-2.698.362-3.805 1.014A7.968 7.968 0 009 4.804z"/></svg>
-                        Browse Chapter
-                    </h2>
-                    <div id="chapter-nav">
-                        <button id="ch-prev-btn" class="ch-nav-btn" title="Previous chapter" aria-label="Previous chapter">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                        </button>
-                        <span id="chapter-title"></span>
-                        <button id="ch-next-btn" class="ch-nav-btn" title="Next chapter" aria-label="Next chapter">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div id="chapter-verse-list"></div>
-            </div>
 
         </section>
 
@@ -213,6 +222,6 @@
 
     </main>
 
-    <script src="/frontend/js/dashboard.js?v=8"></script>
+    <script src="/frontend/js/dashboard.js?v=9"></script>
 </body>
 </html>
