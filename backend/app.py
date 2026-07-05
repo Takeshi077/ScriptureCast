@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from contextlib import asynccontextmanager
 from .parser import parse_text_for_verses
-from .semantic import might_be_quote
+
 from .database import get_scripture
 from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
 
@@ -189,7 +189,7 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
     candidates = parse_text_for_verses(text)
 
     semantic_candidates = []
-    if HAS_SEMANTIC and (candidates or might_be_quote(text)):
+    if HAS_SEMANTIC:
         now = time.time()
         last_semantic = state.get("last_semantic_search", 0.0)
         if now - last_semantic >= 5.0:
@@ -223,7 +223,7 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
         now = time.time()
         if now - user_last_display[user_id] >= 3.0:
             for c in candidates:
-                if c.get("type") != "semantic" and c["confidence"] >= 90:
+                if c["confidence"] >= (95 if c.get("type") == "semantic" else 90):
                     user_last_display[user_id] = now
                     await _display_candidate(c, user_id)
                     break
