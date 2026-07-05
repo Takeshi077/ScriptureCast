@@ -629,6 +629,7 @@ function handleStateUpdate(state) {
     _activeImage = state.active_image;
     currentVerseIndex = state.current_verse_index ?? 0;
     updateProjectorPreview(state.active_scripture, state.active_image);
+    updateChapterBrowser(state.active_scripture);
 
     if (state.full_transcript && !fullTranscript && !interimText) {
         fullTranscript = state.full_transcript;
@@ -1441,6 +1442,116 @@ imagesFileInput.addEventListener('change', (e) => {
 imagesUploadLabel.addEventListener('click', (e) => {
     e.preventDefault();
     imagesFileInput.click();
+});
+
+// ── Chapter Browser ─────────────────────────────────────────
+let _browserBook = null;
+let _browserChapter = null;
+let _browserVerses = [];
+
+async function _loadChapterVerses(book, chapter, activeVerse) {
+  const bookData = B.find(b => b[0] === book);
+  if (!bookData) return;
+  const maxVerse = bookData[chapter];
+  if (!maxVerse) return;
+
+  const translation = translationSel.value;
+  const url = `${BASE_URL}/api/verse?book=${encodeURIComponent(book)}&chapter=${chapter}&verse=1&verse_end=${maxVerse}&translation=${translation}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.verses) {
+      _browserVerses = data.verses;
+      _renderBrowser(book, chapter, activeVerse);
+    }
+  } catch {
+    _browserVerses = [];
+  }
+}
+
+function _renderBrowser(book, chapter, activeVerse) {
+  const list = document.getElementById('chapter-verse-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  for (const v of _browserVerses) {
+    const row = document.createElement('div');
+    row.className = 'ch-verse-row';
+    if (v.verse === activeVerse) row.classList.add('active');
+    row.dataset.verse = v.verse;
+
+    const num = document.createElement('span');
+    num.className = 'ch-verse-num';
+    num.textContent = v.verse;
+
+    const preview = document.createElement('span');
+    preview.className = 'ch-verse-text';
+    const txt = v.text.length > 60 ? v.text.slice(0, 60) + '…' : v.text;
+    preview.textContent = txt;
+
+    const btn = document.createElement('button');
+    btn.className = 'ch-verse-display-btn';
+    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg> Display';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      send({ type: 'manual_verse', verse_text: `${book} ${chapter}:${v.verse}` });
+    });
+
+    row.appendChild(num);
+    row.appendChild(preview);
+    row.appendChild(btn);
+    list.appendChild(row);
+  }
+
+  const activeRow = list.querySelector('.ch-verse-row.active');
+  if (activeRow) activeRow.scrollIntoView({ block: 'center' });
+}
+
+function _highlightCurrentVerseInBrowser(verse) {
+  const rows = document.querySelectorAll('#chapter-verse-list .ch-verse-row');
+  rows.forEach(row => row.classList.toggle('active', parseInt(row.dataset.verse) === verse));
+  const activeRow = document.querySelector('#chapter-verse-list .ch-verse-row.active');
+  if (activeRow) activeRow.scrollIntoView({ block: 'center' });
+}
+
+function updateChapterBrowser(scripture) {
+  const card = document.getElementById('chapter-browser-card');
+  if (!card) return;
+
+  if (!scripture || !scripture.book || !scripture.chapter) {
+    card.classList.add('hidden');
+    return;
+  }
+
+  const book = scripture.book;
+  const chapter = scripture.chapter;
+  const verseStart = scripture.verse_start;
+
+  if (book === _browserBook && chapter === _browserChapter) {
+    _highlightCurrentVerseInBrowser(verseStart);
+    return;
+  }
+
+  _browserBook = book;
+  _browserChapter = chapter;
+
+  const title = document.getElementById('chapter-title');
+  if (title) title.textContent = `${book} ${chapter}`;
+  card.classList.remove('hidden');
+
+  _loadChapterVerses(book, chapter, verseStart);
+}
+
+document.getElementById('ch-prev-btn')?.addEventListener('click', () => {
+  if (!_browserBook || !_browserChapter || _browserChapter <= 1) return;
+  send({ type: 'manual_verse', verse_text: `${_browserBook} ${_browserChapter - 1}:1` });
+});
+
+document.getElementById('ch-next-btn')?.addEventListener('click', () => {
+  if (!_browserBook || !_browserChapter) return;
+  const bookData = B.find(b => b[0] === _browserBook);
+  if (!bookData || _browserChapter >= bookData.length - 1) return;
+  send({ type: 'manual_verse', verse_text: `${_browserBook} ${_browserChapter + 1}:1` });
 });
 
 // ── Verse Autocomplete ──────────────────────────────────────
