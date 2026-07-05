@@ -597,6 +597,81 @@ input[type="number"] { width: 70px; text-align: center; }
     align-self: flex-end;
 }
 
+/* ── Suggestion Dropdown ── */
+#suggestion-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 56px;
+  z-index: 200;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+#suggestion-dropdown .suggestion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+#suggestion-dropdown .suggestion-row:last-child {
+  border-bottom: none;
+}
+
+#suggestion-dropdown .suggestion-row:hover,
+#suggestion-dropdown .suggestion-row.highlighted {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent-blue);
+}
+
+.suggestion-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.suggestion-badge-book {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent-blue);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.suggestion-badge-popular {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.suggestion-badge-range {
+  background: rgba(129, 140, 248, 0.12);
+  color: var(--accent-violet);
+  border: 1px solid rgba(129, 140, 248, 0.2);
+}
+
 /* Manual lookup */
 #manual-card {
     border-top: 1px solid var(--border);
@@ -615,6 +690,7 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 #manual-lookup-form {
+    position: relative;
     display: flex;
     gap: 6px;
 }
