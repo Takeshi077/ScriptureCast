@@ -430,10 +430,11 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 .section-divider {
-  height: 1px;
-  background: var(--border);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--border), rgba(56,189,248,0.18), var(--border), transparent);
   flex-shrink: 0;
   margin: 0;
+  border: none;
 }
 
 .continuous-note {
@@ -1400,6 +1401,75 @@ input[type="number"] { width: 70px; text-align: center; }
 
     #panel-preview {
         border-bottom: none;
+    }
+
+    #transcript-section .panel-header,
+    #lookup-section .panel-header {
+        padding: 10px 14px 10px;
+    }
+
+    #transcript-section .panel-header h2,
+    #lookup-section .panel-header h2 {
+        font-size: 11px;
+    }
+
+    #transcript-feed {
+        padding: 10px 14px;
+    }
+
+    #manual-card {
+        padding: 6px 10px 10px;
+    }
+
+    #manual-input {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    #manual-lookup-btn {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+
+    #chapter-browser-card {
+        margin-top: 4px;
+    }
+
+    #chapter-verse-list {
+        padding: 2px 2px 4px;
+    }
+
+    #chapter-title {
+        font-size: 11px;
+    }
+
+    .ch-nav-btn {
+        width: 24px;
+        height: 24px;
+    }
+
+    .ch-nav-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .ch-verse-row {
+        padding: 4px 6px;
+        gap: 6px;
+    }
+
+    .ch-verse-num {
+        font-size: 10px;
+        min-width: 20px;
+    }
+
+    .ch-verse-text {
+        font-size: 11px;
+    }
+
+    .ch-display-btn {
+        font-size: 10px;
+        padding: 3px 8px;
     }
 }
 
