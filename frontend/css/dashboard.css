@@ -422,9 +422,11 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 #lookup-section {
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .section-divider {
@@ -842,8 +844,11 @@ input[type="number"] { width: 70px; text-align: center; }
 
 /* Manual lookup */
 #manual-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 6px 12px 12px;
-  flex-shrink: 0;
 }
 
 #manual-card .panel-header {
