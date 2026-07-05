@@ -57,6 +57,7 @@ html, body {
     word-wrap: break-word;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 
     font-size: clamp(2.5rem, 5.5vw, 5.5rem);
     line-height: 1.25;
@@ -119,26 +120,6 @@ html, body {
 
 #screen-image.visible {
     opacity: 1;
-}
-
-/* Long verse text - reduced size for longer content (200+ chars) */
-#scripture-text.long-text {
-    font-size: clamp(1.4rem, 2.5vw, 3rem);
-}
-@media (orientation: landscape) and (min-width: 1200px) {
-    #scripture-text.long-text {
-        font-size: clamp(1.4rem, 2.5vw, 3rem);
-    }
-}
-@media (orientation: portrait), (max-width: 800px) {
-    #scripture-text.long-text {
-        font-size: clamp(1rem, 3.5vw, 2rem);
-    }
-}
-@media (min-width: 2000px) {
-    #scripture-text.long-text {
-        font-size: clamp(1.4rem, 2vw, 3rem);
-    }
 }
 
 /* Inline Verse Numbers & Verse Spacing */

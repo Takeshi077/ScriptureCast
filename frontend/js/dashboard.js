@@ -1339,6 +1339,11 @@ function showProjectorToast(type, message) {
     else if (type === 'success') toast.classList.add('success');
     document.getElementById('projector-toast-msg').textContent = message;
     toast.classList.remove('hidden');
+
+    if (toast._hideTimer) clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 4000);
 }
 
 // ── Event Listeners ──
@@ -1519,7 +1524,6 @@ function updateChapterBrowser(scripture) {
   if (!card) return;
 
   if (!scripture || !scripture.book || !scripture.chapter) {
-    card.classList.add('hidden');
     return;
   }
 
@@ -1642,11 +1646,82 @@ const WELL_KNOWN_VERSES = [
   { ref: "Joshua 1:9", book: "Joshua", ch: 1, v: 9 },
 ];
 
+const BOOK_ABBREVIATIONS = {
+  "gen": "Genesis", "ge": "Genesis", "gn": "Genesis",
+  "exo": "Exodus", "exod": "Exodus",
+  "lev": "Leviticus",
+  "num": "Numbers", "nm": "Numbers", "nbr": "Numbers",
+  "deut": "Deuteronomy", "dt": "Deuteronomy",
+  "josh": "Joshua", "jos": "Joshua",
+  "judg": "Judges", "jg": "Judges", "jdg": "Judges",
+  "rut": "Ruth",
+  "1sa": "1 Samuel", "1s": "1 Samuel", "1 sam": "1 Samuel",
+  "2sa": "2 Samuel", "2s": "2 Samuel", "2 sam": "2 Samuel",
+  "1ki": "1 Kings", "1k": "1 Kings", "1 ki": "1 Kings",
+  "2ki": "2 Kings", "2k": "2 Kings", "2 ki": "2 Kings",
+  "1ch": "1 Chronicles", "1 chron": "1 Chronicles",
+  "2ch": "2 Chronicles", "2 chron": "2 Chronicles",
+  "ezr": "Ezra",
+  "neh": "Nehemiah",
+  "esth": "Esther", "est": "Esther",
+  "psa": "Psalms", "ps": "Psalms", "pss": "Psalms", "psalm": "Psalms",
+  "prov": "Proverbs", "prv": "Proverbs",
+  "ecc": "Ecclesiastes", "eccles": "Ecclesiastes",
+  "song": "Song of Solomon", "sos": "Song of Solomon",
+  "isa": "Isaiah",
+  "jer": "Jeremiah", "jrm": "Jeremiah",
+  "lam": "Lamentations",
+  "ezek": "Ezekiel", "ezk": "Ezekiel",
+  "dan": "Daniel", "dn": "Daniel",
+  "hos": "Hosea",
+  "jl": "Joel",
+  "amo": "Amos",
+  "obad": "Obadiah",
+  "jon": "Jonah", "jnh": "Jonah",
+  "mic": "Micah",
+  "nah": "Nahum",
+  "hab": "Habakkuk",
+  "zeph": "Zephaniah", "zep": "Zephaniah",
+  "hag": "Haggai",
+  "zech": "Zechariah", "zec": "Zechariah",
+  "mal": "Malachi",
+  "matt": "Matthew", "mat": "Matthew", "mt": "Matthew",
+  "mar": "Mark", "mk": "Mark", "mrk": "Mark",
+  "luk": "Luke", "lk": "Luke",
+  "joh": "John", "jn": "John", "jhn": "John",
+  "rom": "Romans", "rm": "Romans",
+  "1co": "1 Corinthians", "1c": "1 Corinthians", "1 cor": "1 Corinthians",
+  "2co": "2 Corinthians", "2c": "2 Corinthians", "2 cor": "2 Corinthians",
+  "gal": "Galatians", "ga": "Galatians",
+  "eph": "Ephesians", "ephes": "Ephesians",
+  "phil": "Philippians", "php": "Philippians",
+  "col": "Colossians",
+  "1th": "1 Thessalonians", "1t": "1 Thessalonians", "1 thess": "1 Thessalonians",
+  "2th": "2 Thessalonians", "2t": "2 Thessalonians", "2 thess": "2 Thessalonians",
+  "1ti": "1 Timothy", "1 tim": "1 Timothy",
+  "2ti": "2 Timothy", "2 tim": "2 Timothy",
+  "tit": "Titus",
+  "phm": "Philemon", "philem": "Philemon",
+  "heb": "Hebrews", "hebr": "Hebrews",
+  "jas": "James",
+  "1pe": "1 Peter", "1p": "1 Peter", "1 pet": "1 Peter",
+  "2pe": "2 Peter", "2p": "2 Peter", "2 pet": "2 Peter",
+  "1j": "1 John", "1 jn": "1 John",
+  "2j": "2 John", "2 jn": "2 John",
+  "3j": "3 John", "3 jn": "3 John",
+  "jud": "Jude",
+  "rev": "Revelation", "revel": "Revelation"
+};
+
 let _suggestionIndex = -1;
 
 function _findBook(input) {
-  const lower = input.toLowerCase().replace(/\s+/g, ' ');
+  const lower = input.toLowerCase().replace(/\s+/g, ' ').trim();
   const numbered = /^\d+/.test(lower);
+
+  const fullName = BOOK_ABBREVIATIONS[lower];
+  if (fullName) return B.find(b => b[0] === fullName) || null;
+
   for (const book of B) {
     const name = book[0].toLowerCase();
     if (name === lower) return book;
@@ -1662,9 +1737,17 @@ function _findBook(input) {
 }
 
 function _findBooksPartial(input) {
-  const lower = input.toLowerCase().replace(/\s+/g, ' ');
+  const lower = input.toLowerCase().replace(/\s+/g, ' ').trim();
   const results = [];
   const numbered = /^\d+/.test(lower);
+
+  const fullName = BOOK_ABBREVIATIONS[lower];
+  if (fullName) {
+    const book = B.find(b => b[0] === fullName);
+    if (book) results.unshift(book);
+    return results;
+  }
+
   for (const book of B) {
     const name = book[0].toLowerCase();
     if (name === lower) { results.unshift(book); continue; }

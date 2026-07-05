@@ -198,7 +198,6 @@ function updateDisplay(activeScripture, activeImage) {
         navEl.classList.add('hidden');
     }
 
-    adjustTextSize();
     textEl.scrollTop = 0;
     container.classList.remove('hidden');
     requestAnimationFrame(() => {
@@ -213,7 +212,6 @@ function goToPrevVerse() {
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
     renderSingleVerse(verses[currentVerseIndex], _activeScripture.book, _activeScripture.chapter);
     updateNavigation(verses.length);
-    adjustTextSize();
     textEl.scrollTop = 0;
 }
 
@@ -224,7 +222,6 @@ function goToNextVerse() {
     send({ type: 'verse_navigate', verse_index: currentVerseIndex });
     renderSingleVerse(verses[currentVerseIndex], _activeScripture.book, _activeScripture.chapter);
     updateNavigation(verses.length);
-    adjustTextSize();
     textEl.scrollTop = 0;
 }
 
@@ -251,21 +248,6 @@ function hideDisplay() {
 
 function safeJson(str) {
     try { return JSON.parse(str); } catch { return null; }
-}
-
-function adjustTextSize() {
-    textEl.style.fontSize = '';
-
-    requestAnimationFrame(() => {
-        let fontSize = parseFloat(window.getComputedStyle(textEl).fontSize);
-        if (isNaN(fontSize) || fontSize <= 0) return;
-        let safety = 0;
-        while (textEl.scrollHeight > textEl.clientHeight + 1 && safety < 100 && fontSize > 12) {
-            fontSize -= 1;
-            textEl.style.fontSize = fontSize + 'px';
-            safety++;
-        }
-    });
 }
 
 connect();
