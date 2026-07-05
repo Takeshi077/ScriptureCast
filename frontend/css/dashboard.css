@@ -422,11 +422,9 @@ input[type="number"] { width: 70px; text-align: center; }
 }
 
 #lookup-section {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .section-divider {
@@ -599,21 +597,10 @@ input[type="number"] { width: 70px; text-align: center; }
 #chapter-browser-card {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  margin-top: 6px;
 }
 
 #chapter-browser-card.hidden {
   display: none !important;
-}
-
-#chapter-browser-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-  padding: 4px 0;
 }
 
 #chapter-nav {
@@ -855,12 +842,8 @@ input[type="number"] { width: 70px; text-align: center; }
 
 /* Manual lookup */
 #manual-card {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px 12px;
-  overflow: hidden;
+  padding: 6px 12px 12px;
+  flex-shrink: 0;
 }
 
 #manual-card .panel-header {
@@ -1418,7 +1401,7 @@ input[type="number"] { width: 70px; text-align: center; }
     }
 
     #manual-card {
-        padding: 6px 10px 10px;
+        padding: 4px 10px 10px;
     }
 
     #manual-input {
@@ -1431,9 +1414,7 @@ input[type="number"] { width: 70px; text-align: center; }
         padding: 5px 10px;
     }
 
-    #chapter-browser-card {
-        margin-top: 4px;
-    }
+
 
     #chapter-verse-list {
         padding: 2px 2px 4px;

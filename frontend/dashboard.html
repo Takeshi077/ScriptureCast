@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/frontend/css/dashboard.css?v=7">
+    <link rel="stylesheet" href="/frontend/css/dashboard.css?v=8">
     <link rel="icon" href="/frontend/logo.png" type="image/png">
 </head>
 <body>
@@ -99,21 +99,6 @@
                         <div id="lookup-reference-label"></div>
                         <div id="lookup-text-preview"></div>
                     </div>
-                    <!-- Chapter Browser (embedded) -->
-                    <div id="chapter-browser-card" class="hidden">
-                        <div id="chapter-browser-header">
-                            <div id="chapter-nav">
-                                <button id="ch-prev-btn" class="ch-nav-btn" title="Previous chapter" aria-label="Previous chapter">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                                </button>
-                                <span id="chapter-title"></span>
-                                <button id="ch-next-btn" class="ch-nav-btn" title="Next chapter" aria-label="Next chapter">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="chapter-verse-list"></div>
-                    </div>
                 </div>
             </div>
 
@@ -135,6 +120,25 @@
                 </div>
             </div>
 
+            <!-- Browse Chapter -->
+            <div id="chapter-browser-card" class="card hidden">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.396 0 2.698.362 3.805 1.014A7.968 7.968 0 0114 14.5c1.255 0 2.443.29 3.5.804v-10A7.969 7.969 0 0014 4c-1.396 0-2.698.362-3.805 1.014A7.968 7.968 0 009 4.804z"/></svg>
+                        Browse Chapter
+                    </h2>
+                    <div id="chapter-nav">
+                        <button id="ch-prev-btn" class="ch-nav-btn" title="Previous chapter" aria-label="Previous chapter">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <span id="chapter-title"></span>
+                        <button id="ch-next-btn" class="ch-nav-btn" title="Next chapter" aria-label="Next chapter">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="chapter-verse-list"></div>
+            </div>
 
         </section>
 
@@ -222,6 +226,6 @@
 
     </main>
 
-    <script src="/frontend/js/dashboard.js?v=9"></script>
+    <script src="/frontend/js/dashboard.js?v=10"></script>
 </body>
 </html>
