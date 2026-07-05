@@ -238,11 +238,8 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
         for c in candidates:
             conf = c.get("confidence", 0)
             kind = c.get("type")
-            # High-confidence regex references (explicit verse cited aloud) get a
-            # shorter cooldown (1.5 s) so they appear almost immediately.
-            # Semantic/lower-confidence matches keep the longer 3 s cooldown.
             threshold_conf = 95 if kind == "semantic" else 90
-            cooldown = 3.0 if kind == "semantic" else 1.5
+            cooldown = 3.0 if kind == "semantic" else 0.0
             if conf >= threshold_conf and elapsed >= cooldown:
                 user_last_display[user_id] = now
                 await _display_candidate(c, user_id)
