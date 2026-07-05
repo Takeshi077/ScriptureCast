@@ -1,8 +1,17 @@
 import sqlite3
 import os
+import threading
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "bible.db")
+
+# Thread-local persistent connection — avoids opening/closing SQLite on every lookup.
+_local = threading.local()
+
+def _get_conn():
+    if not hasattr(_local, "conn") or _local.conn is None:
+        _local.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return _local.conn
 
 def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
     """
@@ -14,10 +23,10 @@ def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
     """
     if not os.path.exists(DB_PATH):
         return {"error": "Database not found."}
-    
-    conn = sqlite3.connect(DB_PATH)
+
+    conn = _get_conn()
     cursor = conn.cursor()
-    
+
     # Defaults to verse 1 if no verse is specified (VD-03)
     if verse_start is None:
         verse_start = 1
@@ -28,37 +37,35 @@ def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
             reference_str = f"{book} {chapter}:{verse_start}-{verse_end}"
         else:
             reference_str = f"{book} {chapter}:{verse_start}"
-            
+
     reference_str += f" ({translation})"
-    
+
     query = """
-        SELECT verse, text 
-        FROM scriptures 
+        SELECT verse, text
+        FROM scriptures
         WHERE translation = ? AND book = ? AND chapter = ?
     """
     params = [translation, book, chapter]
-    
+
     if verse_end:
         query += " AND verse >= ? AND verse <= ?"
         params.extend([verse_start, verse_end])
     else:
         query += " AND verse = ?"
         params.append(verse_start)
-        
+
     query += " ORDER BY verse ASC"
-    
+
     cursor.execute(query, params)
     rows = cursor.fetchall()
-    
-    conn.close()
-    
+
     if not rows:
         return {
             "reference": reference_str,
             "verses": [],
             "combined_text": "Scripture reference not found in translation."
         }
-    
+
     verses = []
     text_parts = []
     for verse_num, text in rows:
@@ -67,9 +74,9 @@ def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
             "text": text
         })
         text_parts.append(text)
-        
+
     combined_text = " ".join(text_parts)
-    
+
     return {
         "reference": reference_str,
         "verses": verses,

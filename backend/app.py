@@ -8,9 +8,16 @@ import time
 import tempfile
 import uuid
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from .parser import parse_text_for_verses
 
-from .database import get_scripture
+from .database import get_scripture as _get_scripture_raw
+
+@lru_cache(maxsize=512)
+def get_scripture(translation, book, chapter, verse_start=None, verse_end=None):
+    """Cached wrapper around the raw DB lookup — avoids repeated SQLite connections for the same verse."""
+    return _get_scripture_raw(translation, book, chapter, verse_start, verse_end)
+
 from .auth import router as auth_router, require_user, get_current_user, get_current_user_from_ws
 
 HAS_SEMANTIC = False
@@ -195,12 +202,18 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
         if now - last_semantic >= 5.0:
             state["last_semantic_search"] = now
             top_k = 3 if candidates else 5
-            semantic_candidates = search_similar_verses(
-                text,
-                translation=state["current_translation"],
-                context_book=state.get("context_book"),
-                context_chapter=state.get("context_chapter"),
-                top_k=top_k
+            # Run the CPU-bound TF-IDF + re-ranking off the async event loop
+            # so it does not freeze WebSocket message delivery.
+            loop = asyncio.get_event_loop()
+            semantic_candidates = await loop.run_in_executor(
+                None,
+                lambda: search_similar_verses(
+                    text,
+                    translation=state["current_translation"],
+                    context_book=state.get("context_book"),
+                    context_chapter=state.get("context_chapter"),
+                    top_k=top_k
+                )
             )
     seen = {f"{c['book']}{c.get('chapter')}{c.get('verse_start')}" for c in candidates}
     for sc in semantic_candidates:
@@ -221,12 +234,19 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
         if user_id not in user_last_display:
             user_last_display[user_id] = 0.0
         now = time.time()
-        if now - user_last_display[user_id] >= 3.0:
-            for c in candidates:
-                if c["confidence"] >= (95 if c.get("type") == "semantic" else 90):
-                    user_last_display[user_id] = now
-                    await _display_candidate(c, user_id)
-                    break
+        elapsed = now - user_last_display[user_id]
+        for c in candidates:
+            conf = c.get("confidence", 0)
+            kind = c.get("type")
+            # High-confidence regex references (explicit verse cited aloud) get a
+            # shorter cooldown (1.5 s) so they appear almost immediately.
+            # Semantic/lower-confidence matches keep the longer 3 s cooldown.
+            threshold_conf = 95 if kind == "semantic" else 90
+            cooldown = 3.0 if kind == "semantic" else 1.5
+            if conf >= threshold_conf and elapsed >= cooldown:
+                user_last_display[user_id] = now
+                await _display_candidate(c, user_id)
+                break
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
