@@ -255,24 +255,16 @@ function safeJson(str) {
 
 function adjustTextSize() {
     textEl.style.fontSize = '';
-    textEl.classList.remove('long-text');
-
-    const totalChars = textEl.textContent.length;
-    if (totalChars > 200) {
-        textEl.classList.add('long-text');
-    }
 
     requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            let fontSize = parseFloat(window.getComputedStyle(textEl).fontSize);
-            if (isNaN(fontSize) || fontSize <= 0) return;
-            let safety = 0;
-            while (textEl.scrollHeight > textEl.clientHeight + 1 && safety < 200 && fontSize > 10) {
-                fontSize -= 0.5;
-                textEl.style.fontSize = fontSize + 'px';
-                safety++;
-            }
-        });
+        let fontSize = parseFloat(window.getComputedStyle(textEl).fontSize);
+        if (isNaN(fontSize) || fontSize <= 0) return;
+        let safety = 0;
+        while (textEl.scrollHeight > textEl.clientHeight + 1 && safety < 100 && fontSize > 12) {
+            fontSize -= 1;
+            textEl.style.fontSize = fontSize + 'px';
+            safety++;
+        }
     });
 }
 
