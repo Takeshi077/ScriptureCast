@@ -76,6 +76,41 @@ const imagesFileInput = document.getElementById('images-file-input');
 const imagesGallery = document.getElementById('images-gallery');
 const imagesUploadLabel = document.getElementById('images-upload-label');
 
+// ── Media toggle ──
+const mediaBtn = document.getElementById('media-btn');
+const mediaOverlay = document.getElementById('media-overlay');
+const mediaCloseBtn = document.getElementById('media-close-btn');
+
+mediaBtn.addEventListener('click', () => {
+    mediaOverlay.classList.toggle('hidden');
+});
+mediaCloseBtn.addEventListener('click', () => {
+    mediaOverlay.classList.add('hidden');
+});
+mediaOverlay.addEventListener('click', (e) => {
+    if (e.target === mediaOverlay) mediaOverlay.classList.add('hidden');
+});
+
+// ── Outputs toggle ──
+const outputsBtn = document.getElementById('outputs-btn');
+const outputsOverlay = document.getElementById('outputs-overlay');
+const outputsCloseBtn = document.getElementById('outputs-close-btn');
+
+outputsBtn.addEventListener('click', () => {
+    outputsOverlay.classList.toggle('hidden');
+    if (!outputsOverlay.classList.contains('hidden')) {
+        // Refresh display list when opened
+        const ev = new Event('outputs-opened');
+        document.dispatchEvent(ev);
+    }
+});
+outputsCloseBtn.addEventListener('click', () => {
+    outputsOverlay.classList.add('hidden');
+});
+outputsOverlay.addEventListener('click', (e) => {
+    if (e.target === outputsOverlay) outputsOverlay.classList.add('hidden');
+});
+
 // ── State ──────────────────────────────────────────────────
 let socket = null;
 // Will be populated by the server
@@ -1389,9 +1424,6 @@ document.getElementById('open-screen-btn').addEventListener('click', openProject
 
 // Tauri-specific outputs section
 if (window.__TAURI__) {
-    const outputsSection = document.getElementById('outputs-section');
-    if (outputsSection) outputsSection.classList.remove('hidden');
-
     document.getElementById('refresh-displays-btn')?.addEventListener('click', loadDisplays);
     document.getElementById('identify-displays-btn')?.addEventListener('click', identifyDisplays);
     document.getElementById('open-projector-btn')?.addEventListener('click', async () => {

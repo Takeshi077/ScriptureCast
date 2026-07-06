@@ -31,7 +31,15 @@
                 </select>
             </div>
 
-            <button id="clear-btn" class="btn btn-danger" aria-label="Clear display">
+                <button id="media-btn" class="btn btn-secondary" aria-label="Toggle media panel" title="Media">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+                    Media
+                </button>
+                <button id="outputs-btn" class="btn btn-secondary" aria-label="Toggle outputs panel" title="Outputs">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6c0 1.887-.454 3.665-1.257 5.235a.75.75 0 00.515 1.076 32.91 32.91 0 003.256.508 3.5 3.5 0 004.97 0 32.933 32.933 0 003.256-.508.75.75 0 00.515-1.076A11.448 11.448 0 0116 8a6 6 0 00-6-6z"/></svg>
+                    Outputs
+                </button>
+                <button id="clear-btn" class="btn btn-danger" aria-label="Clear display">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                 Clear Display
             </button>
@@ -195,13 +203,19 @@
                 </button>
             </div>
 
-            <!-- ===== IMAGES SECTION ===== -->
-            <div id="images-section" class="card">
+        </section>
+
+        <!-- ===== MEDIA OVERLAY ===== -->
+        <div id="media-overlay" class="hidden">
+            <div id="media-panel" class="card">
                 <div class="panel-header">
                     <h2>
                         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
-                        Images
+                        Media
                     </h2>
+                    <button id="media-close-btn" class="btn-icon" aria-label="Close media panel">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
                 </div>
                 <div id="images-upload-area">
                     <label id="images-upload-label" class="upload-label">
@@ -212,11 +226,21 @@
                 </div>
                 <div id="images-gallery"></div>
             </div>
+        </div>
 
-            <!-- ===== OUTPUTS / DISPLAY SELECTION (Tauri only) ===== -->
-            <div id="outputs-section" class="hidden">
-                <div class="outputs-header">
-                    <h3>Outputs</h3>
+        <!-- ===== OUTPUTS OVERLAY ===== -->
+        <div id="outputs-overlay" class="hidden">
+            <div id="outputs-panel" class="card">
+                <div class="panel-header">
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6c0 1.887-.454 3.665-1.257 5.235a.75.75 0 00.515 1.076 32.91 32.91 0 003.256.508 3.5 3.5 0 004.97 0 32.933 32.933 0 003.256-.508.75.75 0 00.515-1.076A11.448 11.448 0 0116 8a6 6 0 00-6-6z"/></svg>
+                        Outputs
+                    </h2>
+                    <button id="outputs-close-btn" class="btn-icon" aria-label="Close outputs panel">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
+                <div class="outputs-body">
                     <div class="outputs-actions">
                         <button id="refresh-displays-btn" class="btn-icon" title="Refresh display list">
                             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
@@ -227,16 +251,16 @@
                             Identify
                         </button>
                     </div>
+                    <select id="display-select">
+                        <option value="">Select a display…</option>
+                    </select>
+                    <button id="open-projector-btn" class="btn btn-secondary">
+                        <span class="btn-spinner"></span>
+                        <span class="btn-label">Open Projector Screen</span>
+                    </button>
                 </div>
-                <select id="display-select">
-                    <option value="">Select a display…</option>
-                </select>
-                <button id="open-projector-btn" class="btn btn-secondary">
-                    <span class="btn-spinner"></span>
-                    <span class="btn-label">Open Projector Screen</span>
-                </button>
             </div>
-        </section>
+        </div>
 
     </main>
 

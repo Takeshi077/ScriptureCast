@@ -1081,6 +1081,55 @@ input[type="number"] { width: 70px; text-align: center; }
     min-height: 0;
 }
 
+#media-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#media-overlay.hidden {
+    display: none;
+}
+
+#media-panel {
+    width: min(600px, 90vw);
+    max-height: 80vh;
+}
+
+#outputs-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#outputs-overlay.hidden {
+    display: none;
+}
+
+#outputs-panel {
+    width: min(400px, 90vw);
+}
+
+.outputs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
+.outputs-body .outputs-actions {
+    display: flex;
+    gap: 8px;
+}
+
 #quote-detection-controls {
     display: flex;
     align-items: center;
