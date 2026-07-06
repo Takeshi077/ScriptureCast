@@ -777,11 +777,6 @@ pub fn run() {
             window_label: Mutex::new(None),
         })
         .setup(|app| {
-            if let Some(window) = app.get_webview_window("main") {
-                if let Ok(url) = tauri::Url::parse("https://scripturecast.onrender.com") {
-                    let _ = window.navigate(url);
-                }
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
