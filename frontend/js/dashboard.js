@@ -752,8 +752,8 @@ function renderCandidates(candidates, container, kind) {
 
         container.insertBefore(item, container.firstChild);
 
-        // Auto-display references with high confidence
-        if (kind === 'reference' && candidate.confidence >= 90) {
+        // Auto-display references with high confidence (never auto-display quotes)
+        if (kind === 'reference' && candidate.confidence >= 90 && candidate.type !== 'semantic') {
             displayCandidate(candidate);
             item.classList.add('active-candidate');
         }
