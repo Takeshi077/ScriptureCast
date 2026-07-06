@@ -752,6 +752,12 @@ function renderCandidates(candidates, container, kind) {
 
         container.insertBefore(item, container.firstChild);
 
+        // Auto-display references with high confidence
+        if (kind === 'reference' && candidate.confidence >= 90) {
+            displayCandidate(candidate);
+            item.classList.add('active-candidate');
+        }
+
         const allItems = container.querySelectorAll('.candidate-item');
         if (allItems.length > 8) {
             allItems[allItems.length - 1].remove();
@@ -1424,6 +1430,7 @@ document.getElementById('open-screen-btn').addEventListener('click', openProject
 
 // Tauri-specific outputs section
 if (window.__TAURI__) {
+    document.getElementById('outputs-btn')?.classList.remove('hidden');
     document.getElementById('refresh-displays-btn')?.addEventListener('click', loadDisplays);
     document.getElementById('identify-displays-btn')?.addEventListener('click', identifyDisplays);
     document.getElementById('open-projector-btn')?.addEventListener('click', async () => {
