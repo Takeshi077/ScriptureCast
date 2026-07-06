@@ -752,12 +752,12 @@ function renderCandidates(candidates, container, kind) {
 
         container.insertBefore(item, container.firstChild);
 
-        // Auto-display references with high confidence (never auto-display quotes)
+        /* Auto-display disabled for diagnosis — quotes were reaching projector
         if (kind === 'reference' && candidate.confidence >= 90 && candidate.type !== 'semantic') {
             displayCandidate(candidate);
             item.classList.add('active-candidate');
         }
-
+        */
         const allItems = container.querySelectorAll('.candidate-item');
         if (allItems.length > 8) {
             allItems[allItems.length - 1].remove();
