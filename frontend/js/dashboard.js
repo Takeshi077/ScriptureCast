@@ -51,6 +51,7 @@ const clearBtn = document.getElementById('clear-btn');
 const transcriptFeed = document.getElementById('transcript-feed');
 const micLiveLabel = document.getElementById('mic-live-label');
 const candidatesList = document.getElementById('candidates-list');
+const quotesList = document.getElementById('quotes-list');
 const manualInput = document.getElementById('manual-input');
 const manualLookupBtn = document.getElementById('manual-lookup-btn');
 const lookupPreview = document.getElementById('lookup-preview');
@@ -77,7 +78,7 @@ const imagesUploadLabel = document.getElementById('images-upload-label');
 
 // ── State ──────────────────────────────────────────────────
 let socket = null;
-let currentCandidates = [];
+// Will be populated by the server
 let fullTranscript = '';
 let interimText = '';
 let transcriptNote = null;
@@ -658,23 +659,21 @@ function handleTranscript(text, isFinal) {
 
 // ── Candidate Verses Handler ───────────────────────────────
 function handleCandidates(candidates) {
-    currentCandidates = candidates;
-    renderCandidates(candidates);
+    const refs = candidates.filter(c => c.type !== 'semantic');
+    const quotes = candidates.filter(c => c.type === 'semantic');
+    renderCandidates(refs, candidatesList, 'reference');
+    renderCandidates(quotes, quotesList, 'quote');
 }
 
-function renderCandidates(candidates) {
+function renderCandidates(candidates, container, kind) {
     if (!candidates || candidates.length === 0) return;
 
-    // Remove placeholder
-    const placeholder = candidatesList.querySelector('.placeholder-text');
+    const placeholder = container.querySelector('.placeholder-text');
     if (placeholder) placeholder.remove();
 
-    // Process in reverse so first array item (highest confidence) ends up at top
-    // insertBefore(firstChild) reverses order, so we pre-reverse to cancel it out
     candidates.slice().reverse().forEach(candidate => {
-        // Avoid duplicates already in list
         const refKey = `${candidate.book} ${candidate.chapter}:${candidate.verse_start ?? ''}`;
-        const existing = document.querySelector(`[data-ref="${refKey}"]`);
+        const existing = container.querySelector(`[data-ref="${refKey}"]`);
         if (existing) return;
 
         const item = document.createElement('div');
@@ -683,21 +682,15 @@ function renderCandidates(candidates) {
 
         const refStr = buildRefString(candidate);
         const confClass = candidate.confidence >= 85 ? 'conf-high' : candidate.confidence >= 65 ? 'conf-medium' : 'conf-low';
-        const isSemantic = candidate.type === 'semantic';
-
-        const typeLabel = isSemantic
-            ? '<span class="candidate-type semantic">Quote</span>'
-            : '<span class="candidate-type regex">Reference</span>';
 
         item.innerHTML = `
             <div class="candidate-row">
                 <span class="candidate-ref">${escHtml(refStr)}</span>
                 <span class="candidate-meta">
-                    ${typeLabel}
                     <span class="candidate-confidence ${confClass}">${candidate.confidence}%</span>
                 </span>
             </div>
-            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g, '_')}">${isSemantic && candidate.text ? escHtml('"' + candidate.text + '"') : 'Loading…'}</div>
+            <div class="candidate-preview" id="prev-${escHtml(refStr).replace(/\s/g, '_')}">${kind === 'quote' && candidate.text ? escHtml('"' + candidate.text + '"') : 'Loading…'}</div>
             <div class="candidate-actions">
                 <button class="btn btn-primary disp-btn" aria-label="Display ${escHtml(refStr)} on projector">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
@@ -707,29 +700,24 @@ function renderCandidates(candidates) {
             </div>
         `;
 
-        // Only fetch preview for regex matches (semantic already has text)
-        if (!isSemantic) {
+        if (kind !== 'quote') {
             fetchVersePreview(candidate, item.querySelector('.candidate-preview'));
         }
 
-        // Display Now button
         item.querySelector('.disp-btn').addEventListener('click', () => {
             displayCandidate(candidate);
             item.classList.add('active-candidate');
         });
 
-        // Dismiss button
         item.querySelector('.dismiss-btn').addEventListener('click', () => {
             item.style.opacity = '0';
             item.style.transform = 'translateX(-10px)';
             setTimeout(() => item.remove(), 200);
         });
 
-        // Insert at top (most recent first)
-        candidatesList.insertBefore(item, candidatesList.firstChild);
+        container.insertBefore(item, container.firstChild);
 
-        // Cap the list at 8 candidates
-        const allItems = candidatesList.querySelectorAll('.candidate-item');
+        const allItems = container.querySelectorAll('.candidate-item');
         if (allItems.length > 8) {
             allItems[allItems.length - 1].remove();
         }

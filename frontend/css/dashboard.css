@@ -1067,7 +1067,8 @@ input[type="number"] { width: 70px; text-align: center; }
     min-height: 0;
 }
 
-#candidates-card {
+#candidates-card,
+#quotes-card {
     flex: 2;
     min-height: 0;
 }
