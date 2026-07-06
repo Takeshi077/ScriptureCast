@@ -20,6 +20,21 @@ let _lastState = null;
 let currentVerseIndex = 0;
 let _activeScripture = null;
 
+// ── Tauri offline event listener ──────────────────────────
+if (!!(window.__TAURI_INTERNALS__)) {
+    try {
+        window.__TAURI__.event.listen('verse-update', (event) => {
+            const data = event.payload;
+            if (data && data.active_scripture) {
+                updateDisplay(data.active_scripture, data.active_image || null);
+                currentVerseIndex = data.current_verse_index || 0;
+            }
+        });
+    } catch (e) {
+        console.log('Tauri event listen failed:', e);
+    }
+}
+
 function send(obj) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(obj));

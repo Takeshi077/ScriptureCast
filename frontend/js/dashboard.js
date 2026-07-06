@@ -783,10 +783,12 @@ async function fetchVersePreview(candidate, el) {
 }
 
 function displayCandidate(candidate) {
-    send({
-        type: 'manual_verse',
-        verse_text: buildRefString(candidate)
-    });
+    const ref = buildRefString(candidate);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        send({ type: 'manual_verse', verse_text: ref });
+    } else if (window.__TAURI_INTERNALS__) {
+        doManualVerseLookup(ref);
+    }
 }
 
 // ── Manual Verse Result Handler ─────────────────────────────
@@ -982,15 +984,62 @@ textInput.addEventListener('keydown', (e) => {
 manualLookupBtn.addEventListener('click', () => {
     const text = manualInput.value.trim();
     if (!text) return;
-
-    send({ type: 'manual_verse', verse_text: text });
-    lookupPreview.classList.add('hidden');
     manualInput.value = '';
+    doManualVerseLookup(text);
 });
 
 manualInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') manualLookupBtn.click();
 });
+
+async function doManualVerseLookup(text) {
+    // Try online first (WebSocket connected)
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        send({ type: 'manual_verse', verse_text: text });
+        lookupPreview.classList.add('hidden');
+        return;
+    }
+
+    // Fall back to offline via Tauri invoke
+    if (window.__TAURI_INTERNALS__) {
+        lookupPreview.classList.add('hidden');
+        try {
+            const translation = translationSel.value;
+            const result = await tauriInvoke('lookup_verse_text', { text, translation });
+            handleManualVerseResult({
+                reference: result.reference,
+                verses: result.verses,
+                text: result.combined_text || ''
+            });
+
+            // Emit event for screen window
+            try {
+                await window.__TAURI__.event.emit('verse-update', {
+                    active_scripture: {
+                        reference: result.reference,
+                        text: result.combined_text,
+                        verses: result.verses,
+                        book: result.book,
+                        chapter: result.chapter,
+                        verse_start: result.verses?.[0]?.verse || 1
+                    },
+                    active_image: null,
+                    current_verse_index: 0
+                });
+            } catch { }
+        } catch (err) {
+            lookupPreview.classList.remove('hidden');
+            lookupRefLabel.textContent = 'Lookup Error';
+            lookupTextPrev.textContent = String(err);
+        }
+        return;
+    }
+
+    // No WebSocket and no Tauri
+    lookupPreview.classList.remove('hidden');
+    lookupRefLabel.textContent = 'Offline';
+    lookupTextPrev.textContent = 'Cannot look up verse without a network connection.';
+}
 
 // ── Utilities ──────────────────────────────────────────────
 function safeJson(str) {
@@ -1499,7 +1548,12 @@ function _renderBrowser(book, chapter, activeVerse) {
     btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg> Display';
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      send({ type: 'manual_verse', verse_text: `${book} ${chapter}:${v.verse}` });
+      const ref = `${book} ${chapter}:${v.verse}`;
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        send({ type: 'manual_verse', verse_text: ref });
+      } else if (window.__TAURI_INTERNALS__) {
+        doManualVerseLookup(ref);
+      }
     });
 
     row.appendChild(num);
@@ -1548,14 +1602,24 @@ function updateChapterBrowser(scripture) {
 
 document.getElementById('ch-prev-btn')?.addEventListener('click', () => {
   if (!_browserBook || !_browserChapter || _browserChapter <= 1) return;
-  send({ type: 'manual_verse', verse_text: `${_browserBook} ${_browserChapter - 1}:1` });
+  const ref = `${_browserBook} ${_browserChapter - 1}:1`;
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    send({ type: 'manual_verse', verse_text: ref });
+  } else if (window.__TAURI_INTERNALS__) {
+    doManualVerseLookup(ref);
+  }
 });
 
 document.getElementById('ch-next-btn')?.addEventListener('click', () => {
   if (!_browserBook || !_browserChapter) return;
   const bookData = B.find(b => b[0] === _browserBook);
   if (!bookData || _browserChapter >= bookData.length - 1) return;
-  send({ type: 'manual_verse', verse_text: `${_browserBook} ${_browserChapter + 1}:1` });
+  const ref = `${_browserBook} ${_browserChapter + 1}:1`;
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    send({ type: 'manual_verse', verse_text: ref });
+  } else if (window.__TAURI_INTERNALS__) {
+    doManualVerseLookup(ref);
+  }
 });
 
 // ── Verse Autocomplete ──────────────────────────────────────
