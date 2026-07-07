@@ -554,5 +554,11 @@ if os.path.exists(FRONTEND_DIR):
     app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
     app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")
     app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
+    app.mount("/downloads", StaticFiles(directory=os.path.join(FRONTEND_DIR, "downloads")), name="downloads")
 if os.path.exists(DATA_DIR):
     app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
+
+
+@app.get("/logo.png")
+async def get_logo():
+    return FileResponse(os.path.join(FRONTEND_DIR, "logo.png"))
