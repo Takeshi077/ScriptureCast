@@ -234,13 +234,8 @@ async def process_transcript(text: str, is_final: bool, user_id: int):
         if user_id not in user_last_display:
             user_last_display[user_id] = 0.0
         now = time.time()
-        elapsed = now - user_last_display[user_id]
         for c in candidates:
-            conf = c.get("confidence", 0)
-            kind = c.get("type")
-            threshold_conf = 95 if kind == "semantic" else 90
-            cooldown = 3.0 if kind == "semantic" else 0.0
-            if conf >= threshold_conf and elapsed >= cooldown:
+            if c.get("type") == "reference" and c.get("confidence", 0) >= 90:
                 user_last_display[user_id] = now
                 await _display_candidate(c, user_id)
                 break
