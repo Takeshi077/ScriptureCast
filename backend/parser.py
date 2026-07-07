@@ -141,6 +141,7 @@ def parse_text_for_verses(text):
             confidence = 45
             
         results.append({
+            "type": "reference",
             "raw_match": raw_match,
             "book": normalized_book,
             "chapter": chapter,
