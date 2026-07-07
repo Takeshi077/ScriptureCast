@@ -6,6 +6,8 @@ pip install -r backend/requirements.txt
 
 echo "=== Setting up data directories ==="
 mkdir -p data/embeddings
+mkdir -p frontend/downloads
+mkdir -p frontend/images
 
 echo "=== Checking Bible database ==="
 if [ ! -f data/bible.db ]; then
