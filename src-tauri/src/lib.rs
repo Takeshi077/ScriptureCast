@@ -260,6 +260,18 @@ async fn offline_db_available(app: tauri::AppHandle) -> bool {
     get_bible_db_path(&app).exists()
 }
 
+#[tauri::command]
+async fn lookup_verse_offline(
+    app: tauri::AppHandle,
+    book: String,
+    chapter: i32,
+    verse_start: Option<i32>,
+    verse_end: Option<i32>,
+    translation: Option<String>,
+) -> Result<VerseResult, String> {
+    lookup_verse(app, book, chapter, verse_start, verse_end, translation).await
+}
+
 struct SemanticServer {
     process: Mutex<Option<Child>>,
     port: Mutex<Option<u16>>,
@@ -810,6 +822,7 @@ pub fn run() {
             identify_displays,
             lookup_verse,
             lookup_verse_text,
+            lookup_verse_offline,
             offline_db_available,
         ])
         .run(tauri::generate_context!())

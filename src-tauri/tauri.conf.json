@@ -28,7 +28,7 @@
     "externalBin": ["binaries/whisper-cli"],
     "resources": [
       "binaries/*.dll",
-      "../data/bible.db"
+      "resources/bible.db"
     ]
   }
 }

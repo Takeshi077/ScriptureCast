@@ -73,6 +73,26 @@ identifier = "allow-identify-displays"
 description = "Allows identifying displays"
 commands.allow = ["identify_displays"]
 
+[[permission]]
+identifier = "allow-lookup-verse"
+description = "Allows looking up a verse by book/chapter"
+commands.allow = ["lookup_verse"]
+
+[[permission]]
+identifier = "allow-lookup-verse-text"
+description = "Allows looking up a verse by text"
+commands.allow = ["lookup_verse_text"]
+
+[[permission]]
+identifier = "allow-lookup-verse-offline"
+description = "Allows offline verse lookup via local SQLite database"
+commands.allow = ["lookup_verse_offline"]
+
+[[permission]]
+identifier = "allow-offline-db-available"
+description = "Allows checking if offline Bible database is available"
+commands.allow = ["offline_db_available"]
+
 [[set]]
 identifier = "default"
 description = "Default set of permissions for ScriptureCast app commands"
@@ -92,4 +112,8 @@ permissions = [
     "allow-open-projector-on-display",
     "allow-close-projector",
     "allow-identify-displays",
+    "allow-lookup-verse",
+    "allow-lookup-verse-text",
+    "allow-lookup-verse-offline",
+    "allow-offline-db-available",
 ]

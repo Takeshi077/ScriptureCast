@@ -1018,7 +1018,86 @@ manualInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') manualLookupBtn.click();
 });
 
+function parseBibleRef(text) {
+    const books = [
+        "genesis","genesis","gen","ge","gn","exodus","exodus","exo","exod","leviticus","leviticus","lev",
+        "numbers","numbers","num","nm","nbr","deuteronomy","deuteronomy","deut","dt",
+        "joshua","joshua","josh","jos","judges","judges","judg","jg","jdg","ruth","ruth","rut",
+        "1 samuel","1 samuel","1 sam","1sa","1s","i samuel","i sam",
+        "2 samuel","2 samuel","2 sam","2sa","2s","ii samuel","ii sam",
+        "1 kings","1 kings","1 ki","1ki","1k","i kings","i ki",
+        "2 kings","2 kings","2 ki","2ki","2k","ii kings","ii ki",
+        "1 chronicles","1 chronicles","1 chron","1ch","i chronicles","i chron",
+        "2 chronicles","2 chronicles","2 chron","2ch","ii chronicles","ii chron",
+        "ezra","ezra","ezr","nehemiah","nehemiah","neh","esther","esther","esth","est",
+        "job","job","psalms","psalms","psalm","psa","ps","pss",
+        "proverbs","proverbs","prov","pro","prv","ecclesiastes","ecclesiastes","eccles","ecc",
+        "song of solomon","song of solomon","song","sos",
+        "isaiah","isaiah","isa","jeremiah","jeremiah","jer","jrm",
+        "lamentations","lamentations","lam","ezekiel","ezekiel","ezek","ezk",
+        "daniel","daniel","dan","dn","hosea","hosea","hos","joel","joel","jl",
+        "amos","amos","amo","obadiah","obadiah","obad","jonah","jonah","jon","jnh",
+        "micah","micah","mic","nahum","nahum","nah","habakkuk","habakkuk","hab",
+        "zephaniah","zephaniah","zeph","zep","haggai","haggai","hag","hagg",
+        "zechariah","zechariah","zech","zec","malachi","malachi","mal",
+        "matthew","matthew","matt","mt","mark","mark","mk","mrk",
+        "luke","luke","luk","lk","john","john","jhn","joh","jn",
+        "acts","acts","act","romans","romans","rom","ro",
+        "1 corinthians","1 corinthians","1 cor","1co","i corinthians","i cor",
+        "2 corinthians","2 corinthians","2 cor","2co","ii corinthians","ii cor",
+        "galatians","galatians","gal","ephesians","ephesians","eph",
+        "philippians","philippians","phil","php","colossians","colossians","col",
+        "1 thessalonians","1 thessalonians","1 thes","1th","i thessalonians","i thes",
+        "2 thessalonians","2 thessalonians","2 thes","2th","ii thessalonians","ii thes",
+        "1 timothy","1 timothy","1 tim","1ti","i timothy","i tim",
+        "2 timothy","2 timothy","2 tim","2ti","ii timothy","ii tim",
+        "titus","titus","tit","philemon","philemon","philem","phm",
+        "hebrews","hebrews","heb","james","james","jam","jm",
+        "1 peter","1 peter","1 pet","1pe","i peter","i pet",
+        "2 peter","2 peter","2 pet","2pe","ii peter","ii pet",
+        "1 john","1 john","1 jhn","1jn","i john","i jhn",
+        "2 john","2 john","2 jhn","2jn","ii john","ii jhn",
+        "3 john","3 john","3 jhn","3jn","iii john","iii jhn",
+        "jude","jude","revelation","revelation","rev","re"
+    ];
+    const bookMap = {};
+    for (let i = 0; i < books.length; i += 2) {
+        bookMap[books[i + 1]] = books[i];
+    }
+
+    const lower = text.toLowerCase().trim();
+    const m = lower.match(/^(\d?\s*\w+[\w\s]*?)\s+(\d+)(?:\s*:\s*(\d+))?(?:\s*(?:-|to)\s*(\d+))?\s*$/);
+    if (!m) return null;
+
+    const bookAbbr = m[1].trim().replace(/\s+/g, ' ');
+    const fullBook = bookMap[bookAbbr];
+    if (!fullBook) return null;
+
+    const chapter = parseInt(m[2], 10);
+    const verseStart = m[3] ? parseInt(m[3], 10) : null;
+    const verseEnd = m[4] ? parseInt(m[4], 10) : null;
+    return { book: fullBook, chapter, verseStart, verseEnd };
+}
+
+let offlineBadge = null;
+
+function showOfflineBadge() {
+    if (!offlineBadge) {
+        offlineBadge = document.createElement('span');
+        offlineBadge.className = 'offline-badge';
+        offlineBadge.textContent = 'Offline';
+        lookupRefLabel.parentNode.insertBefore(offlineBadge, lookupRefLabel.nextSibling);
+    }
+    offlineBadge.classList.remove('hidden');
+}
+
+function hideOfflineBadge() {
+    if (offlineBadge) offlineBadge.classList.add('hidden');
+}
+
 async function doManualVerseLookup(text) {
+    hideOfflineBadge();
+
     // Try online first (WebSocket connected)
     if (socket && socket.readyState === WebSocket.OPEN) {
         send({ type: 'manual_verse', verse_text: text });
@@ -1026,17 +1105,58 @@ async function doManualVerseLookup(text) {
         return;
     }
 
-    // Fall back to offline via Tauri invoke
+    // In Tauri context: try online REST API, fall back to offline
     if (window.__TAURI_INTERNALS__) {
+        const parsed = parseBibleRef(text);
+        if (parsed) {
+            const token = localStorage.getItem('token');
+            const params = new URLSearchParams({
+                book: parsed.book,
+                chapter: parsed.chapter
+            });
+            if (parsed.verseStart != null) params.set('verse', parsed.verseStart);
+            if (parsed.verseEnd != null) params.set('verse_end', parsed.verseEnd);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const resp = await fetch(`/api/verse?${params}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.verses && data.verses.length > 0) {
+                        handleManualVerseResult({
+                            reference: data.reference,
+                            verses: data.verses,
+                            text: data.combined_text || ''
+                        });
+                        return;
+                    }
+                }
+            } catch { /* online failed, fall through to offline */ }
+        }
+
+        // Fall back to offline via Tauri invoke
         lookupPreview.classList.add('hidden');
         try {
             const translation = translationSel.value;
-            const result = await tauriInvoke('lookup_verse_text', { text, translation });
+            const result = await tauriInvoke('lookup_verse_offline', {
+                book: parsed?.book || '',
+                chapter: parsed?.chapter || 1,
+                verseStart: parsed?.verseStart ?? null,
+                verseEnd: parsed?.verseEnd ?? null,
+                translation
+            });
             handleManualVerseResult({
                 reference: result.reference,
                 verses: result.verses,
                 text: result.combined_text || ''
             });
+            showOfflineBadge();
 
             // Emit event for screen window
             try {

@@ -5,7 +5,8 @@
   "windows": ["main", "projector", "identify-*"],
   "remote": {
     "urls": [
-      "https://scripturecast.onrender.com/**"
+      "https://scripturecast.onrender.com/**",
+      "http://localhost:*"
     ]
   },
   "permissions": [
@@ -56,6 +57,10 @@
     "allow-get-available-displays",
     "allow-open-projector-on-display",
     "allow-close-projector",
-    "allow-identify-displays"
+    "allow-identify-displays",
+    "allow-lookup-verse",
+    "allow-lookup-verse-text",
+    "allow-lookup-verse-offline",
+    "allow-offline-db-available"
   ]
 }
