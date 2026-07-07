@@ -780,9 +780,8 @@ pub fn run() {
             let server_url = get_server_url(&app.handle());
             let url = tauri::Url::parse(&server_url)
                 .unwrap_or_else(|_| tauri::Url::parse("https://scripturecast.onrender.com").unwrap());
-            let handle = app.handle();
             WebviewWindowBuilder::new(
-                &handle,
+                app,
                 "main",
                 tauri::WebviewUrl::External(url),
             )
