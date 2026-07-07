@@ -777,6 +777,19 @@ pub fn run() {
             window_label: Mutex::new(None),
         })
         .setup(|app| {
+            let server_url = get_server_url(app);
+            let url = tauri::Url::parse(&server_url)
+                .unwrap_or_else(|_| tauri::Url::parse("https://scripturecast.onrender.com").unwrap());
+            WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::External(url),
+            )
+            .title("ScriptureCast")
+            .inner_size(1280.0, 800.0)
+            .resizable(true)
+            .devtools(true)
+            .build()?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

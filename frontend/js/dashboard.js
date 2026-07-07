@@ -18,11 +18,8 @@
 })();
 
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = (window.__TAURI__ !== undefined)
-    ? 'wss://scripturecast.onrender.com/ws'
-    : `${wsProtocol}//${window.location.host}/ws`;
-
-const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
+const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
+const BASE_URL = '';
 
 async function tauriInvoke(cmd, args) {
     if (!window.__TAURI_INTERNALS__) throw new Error('Not in Tauri context');

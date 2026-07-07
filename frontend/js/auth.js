@@ -1,5 +1,4 @@
 (function () {
-  const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
   const errorEl = document.getElementById('auth-error');
@@ -15,7 +14,7 @@
   }
 
   async function api(path, body) {
-    const resp = await fetch(`${BASE_URL}${path}`, {
+    const resp = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

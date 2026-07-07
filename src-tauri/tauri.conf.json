@@ -9,16 +9,7 @@
   },
   "app": {
     "withGlobalTauri": true,
-    "windows": [
-      {
-        "title": "ScriptureCast",
-        "width": 1280,
-        "height": 800,
-        "resizable": true,
-        "fullscreen": false,
-        "devtools": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null,
       "dangerousDisableAssetCspModification": true
