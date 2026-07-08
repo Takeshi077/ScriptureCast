@@ -206,14 +206,33 @@ async fn lookup_verse(
 
     let mut stmt = conn.prepare(&sql).map_err(|e| format!("SQL prepare: {}", e))?;
 
-    let rows = stmt
-        .query_map(rusqlite::params![trans, book, chapter, vs, ve], |row| {
-            Ok(VerseItem {
-                verse: row.get(0)?,
-                text: row.get(1)?,
-            })
-        })
-        .map_err(|e| format!("SQL query: {}", e))?;
+    let rows: Vec<VerseItem> = if verse_end.is_some() && ve != vs {
+        stmt.query_map(
+            rusqlite::params![trans, book, chapter, vs, ve],
+            |row| {
+                Ok(VerseItem {
+                    verse: row.get(0)?,
+                    text: row.get(1)?,
+                })
+            },
+        )
+        .map_err(|e| format!("SQL query: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row: {}", e))?
+    } else {
+        stmt.query_map(
+            rusqlite::params![trans, book, chapter, vs],
+            |row| {
+                Ok(VerseItem {
+                    verse: row.get(0)?,
+                    text: row.get(1)?,
+                })
+            },
+        )
+        .map_err(|e| format!("SQL query: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row: {}", e))?
+    };
 
     let mut verses = Vec::new();
     for row in rows {
