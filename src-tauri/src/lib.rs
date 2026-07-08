@@ -244,7 +244,7 @@ async fn lookup_verse(
         });
     }
 
-    let combined_text = verses
+    let combined_text = rows
         .iter()
         .map(|v| v.text.as_str())
         .collect::<Vec<_>>()
@@ -254,7 +254,7 @@ async fn lookup_verse(
         reference,
         book,
         chapter,
-        verses,
+        verses: rows,
         combined_text,
     })
 }
