@@ -1066,7 +1066,7 @@ function parseBibleRef(text) {
     }
 
     const lower = text.toLowerCase().trim();
-    const m = lower.match(/^(\d?\s*\w+[\w\s]*?)\s+(\d+)(?:\s*:\s*(\d+))?(?:\s*(?:-|to)\s*(\d+))?\s*$/);
+    const m = lower.match(/^(\d?\s*\w+[\w\s]*?)\s+(\d+)(?:[\s:]\s*(\d+))?(?:\s*(?:-|to)\s*(\d+))?\s*$/);
     if (!m) return null;
 
     const bookAbbr = m[1].trim().replace(/\s+/g, ' ');
