@@ -19,7 +19,7 @@
 
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
-const BASE_URL = '';
+const BASE_URL = (window.__TAURI__ !== undefined) ? 'https://scripturecast.onrender.com' : '';
 
 async function tauriInvoke(cmd, args) {
     if (!window.__TAURI_INTERNALS__) throw new Error('Not in Tauri context');
@@ -1120,7 +1120,7 @@ async function doManualVerseLookup(text) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
-                const resp = await fetch(`/api/verse?${params}`, {
+                const resp = await fetch(`${BASE_URL}/api/verse?${params}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                     signal: controller.signal
                 });
