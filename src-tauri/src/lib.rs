@@ -234,12 +234,7 @@ async fn lookup_verse(
         .map_err(|e| format!("Row: {}", e))?
     };
 
-    let mut verses = Vec::new();
-    for row in rows {
-        verses.push(row.map_err(|e| format!("Row: {}", e))?);
-    }
-
-    if verses.is_empty() {
+    if rows.is_empty() {
         return Ok(VerseResult {
             reference,
             book: book.clone(),
