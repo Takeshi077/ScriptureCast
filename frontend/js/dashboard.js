@@ -1138,6 +1138,49 @@ function hideOfflineBadge() {
     if (offlineBadge) offlineBadge.classList.add('hidden');
 }
 
+window.addEventListener('offline', () => { showOfflineBadge(); });
+window.addEventListener('online', () => { hideOfflineBadge(); });
+if (!navigator.onLine) showOfflineBadge();
+
+async function doOfflineLookup(parsed) {
+    lookupPreview.classList.add('hidden');
+    try {
+        const translation = translationSel.value;
+        const result = await tauriInvoke('lookup_verse_offline', {
+            book: parsed?.book || '',
+            chapter: parsed?.chapter || 1,
+            verseStart: parsed?.verseStart ?? null,
+            verseEnd: parsed?.verseEnd ?? null,
+            translation
+        });
+        handleManualVerseResult({
+            reference: result.reference,
+            verses: result.verses,
+            text: result.combined_text || ''
+        });
+        showOfflineBadge();
+
+        try {
+            await window.__TAURI__.event.emit('verse-update', {
+                active_scripture: {
+                    reference: result.reference,
+                    text: result.combined_text,
+                    verses: result.verses,
+                    book: result.book,
+                    chapter: result.chapter,
+                    verse_start: result.verses?.[0]?.verse || 1
+                },
+                active_image: null,
+                current_verse_index: 0
+            });
+        } catch { }
+    } catch (err) {
+        lookupPreview.classList.remove('hidden');
+        lookupRefLabel.textContent = 'Lookup Error';
+        lookupTextPrev.textContent = String(err);
+    }
+}
+
 async function doManualVerseLookup(text) {
     hideOfflineBadge();
 
@@ -1151,18 +1194,29 @@ async function doManualVerseLookup(text) {
     // In Tauri context: try online REST API, fall back to offline
     if (window.__TAURI_INTERNALS__) {
         const parsed = parseBibleRef(text);
-        if (parsed) {
-            const token = localStorage.getItem('token');
-            const params = new URLSearchParams({
-                book: parsed.book,
-                chapter: parsed.chapter
-            });
-            if (parsed.verseStart != null) params.set('verse', parsed.verseStart);
-            if (parsed.verseEnd != null) params.set('verse_end', parsed.verseEnd);
+        if (!parsed) {
+            lookupPreview.classList.remove('hidden');
+            lookupRefLabel.textContent = 'Could not parse scripture reference.';
+            return;
+        }
 
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // If browser says offline, skip the network call entirely
+        if (!navigator.onLine) {
+            await doOfflineLookup(parsed);
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams({
+            book: parsed.book,
+            chapter: parsed.chapter
+        });
+        if (parsed.verseStart != null) params.set('verse', parsed.verseStart);
+        if (parsed.verseEnd != null) params.set('verse_end', parsed.verseEnd);
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1500);
                 const resp = await fetch(`${BASE_URL}/api/verse?${params}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                     signal: controller.signal
@@ -1180,47 +1234,13 @@ async function doManualVerseLookup(text) {
                         return;
                     }
                 }
-            } catch { /* online failed, fall through to offline */ }
+            } catch { /* online failed, fall through to offline */
+                await doOfflineLookup(parsed);
+                return;
+            }
         }
 
-        // Fall back to offline via Tauri invoke
-        lookupPreview.classList.add('hidden');
-        try {
-            const translation = translationSel.value;
-            const result = await tauriInvoke('lookup_verse_offline', {
-                book: parsed?.book || '',
-                chapter: parsed?.chapter || 1,
-                verseStart: parsed?.verseStart ?? null,
-                verseEnd: parsed?.verseEnd ?? null,
-                translation
-            });
-            handleManualVerseResult({
-                reference: result.reference,
-                verses: result.verses,
-                text: result.combined_text || ''
-            });
-            showOfflineBadge();
-
-            // Emit event for screen window
-            try {
-                await window.__TAURI__.event.emit('verse-update', {
-                    active_scripture: {
-                        reference: result.reference,
-                        text: result.combined_text,
-                        verses: result.verses,
-                        book: result.book,
-                        chapter: result.chapter,
-                        verse_start: result.verses?.[0]?.verse || 1
-                    },
-                    active_image: null,
-                    current_verse_index: 0
-                });
-            } catch { }
-        } catch (err) {
-            lookupPreview.classList.remove('hidden');
-            lookupRefLabel.textContent = 'Lookup Error';
-            lookupTextPrev.textContent = String(err);
-        }
+        await doOfflineLookup(parsed);
         return;
     }
 
