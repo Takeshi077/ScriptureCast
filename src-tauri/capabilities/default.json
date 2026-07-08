@@ -61,6 +61,7 @@
     "allow-lookup-verse",
     "allow-lookup-verse-text",
     "allow-lookup-verse-offline",
-    "allow-offline-db-available"
+    "allow-offline-db-available",
+    "allow-debug-bible-db"
   ]
 }

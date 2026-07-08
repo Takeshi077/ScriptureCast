@@ -93,6 +93,11 @@ identifier = "allow-offline-db-available"
 description = "Allows checking if offline Bible database is available"
 commands.allow = ["offline_db_available"]
 
+[[permission]]
+identifier = "allow-debug-bible-db"
+description = "Allows debugging Bible database contents"
+commands.allow = ["debug_bible_db"]
+
 [[set]]
 identifier = "default"
 description = "Default set of permissions for ScriptureCast app commands"
@@ -116,4 +121,5 @@ permissions = [
     "allow-lookup-verse-text",
     "allow-lookup-verse-offline",
     "allow-offline-db-available",
+    "allow-debug-bible-db",
 ]

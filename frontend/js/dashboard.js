@@ -1018,65 +1018,108 @@ manualInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') manualLookupBtn.click();
 });
 
-function parseBibleRef(text) {
-    const books = [
-        "genesis","genesis","gen","ge","gn","exodus","exodus","exo","exod","leviticus","leviticus","lev",
-        "numbers","numbers","num","nm","nbr","deuteronomy","deuteronomy","deut","dt",
-        "joshua","joshua","josh","jos","judges","judges","judg","jg","jdg","ruth","ruth","rut",
-        "1 samuel","1 samuel","1 sam","1sa","1s","i samuel","i sam",
-        "2 samuel","2 samuel","2 sam","2sa","2s","ii samuel","ii sam",
-        "1 kings","1 kings","1 ki","1ki","1k","i kings","i ki",
-        "2 kings","2 kings","2 ki","2ki","2k","ii kings","ii ki",
-        "1 chronicles","1 chronicles","1 chron","1ch","i chronicles","i chron",
-        "2 chronicles","2 chronicles","2 chron","2ch","ii chronicles","ii chron",
-        "ezra","ezra","ezr","nehemiah","nehemiah","neh","esther","esther","esth","est",
-        "job","job","psalms","psalms","psalm","psa","ps","pss",
-        "proverbs","proverbs","prov","pro","prv","ecclesiastes","ecclesiastes","eccles","ecc",
-        "song of solomon","song of solomon","song","sos",
-        "isaiah","isaiah","isa","jeremiah","jeremiah","jer","jrm",
-        "lamentations","lamentations","lam","ezekiel","ezekiel","ezek","ezk",
-        "daniel","daniel","dan","dn","hosea","hosea","hos","joel","joel","jl",
-        "amos","amos","amo","obadiah","obadiah","obad","jonah","jonah","jon","jnh",
-        "micah","micah","mic","nahum","nahum","nah","habakkuk","habakkuk","hab",
-        "zephaniah","zephaniah","zeph","zep","haggai","haggai","hag","hagg",
-        "zechariah","zechariah","zech","zec","malachi","malachi","mal",
-        "matthew","matthew","matt","mt","mark","mark","mk","mrk",
-        "luke","luke","luk","lk","john","john","jhn","joh","jn",
-        "acts","acts","act","romans","romans","rom","ro",
-        "1 corinthians","1 corinthians","1 cor","1co","i corinthians","i cor",
-        "2 corinthians","2 corinthians","2 cor","2co","ii corinthians","ii cor",
-        "galatians","galatians","gal","ephesians","ephesians","eph",
-        "philippians","philippians","phil","php","colossians","colossians","col",
-        "1 thessalonians","1 thessalonians","1 thes","1th","i thessalonians","i thes",
-        "2 thessalonians","2 thessalonians","2 thes","2th","ii thessalonians","ii thes",
-        "1 timothy","1 timothy","1 tim","1ti","i timothy","i tim",
-        "2 timothy","2 timothy","2 tim","2ti","ii timothy","ii tim",
-        "titus","titus","tit","philemon","philemon","philem","phm",
-        "hebrews","hebrews","heb","james","james","jam","jm",
-        "1 peter","1 peter","1 pet","1pe","i peter","i pet",
-        "2 peter","2 peter","2 pet","2pe","ii peter","ii pet",
-        "1 john","1 john","1 jhn","1jn","i john","i jhn",
-        "2 john","2 john","2 jhn","2jn","ii john","ii jhn",
-        "3 john","3 john","3 jhn","3jn","iii john","iii jhn",
-        "jude","jude","revelation","revelation","rev","re"
-    ];
-    const bookMap = {};
-    for (let i = 0; i < books.length; i += 2) {
-        bookMap[books[i + 1]] = books[i];
-    }
+const BOOK_ALIASES = {
+    "genesis": "Genesis", "gen": "Genesis", "ge": "Genesis", "gn": "Genesis",
+    "exodus": "Exodus", "exo": "Exodus", "exod": "Exodus",
+    "leviticus": "Leviticus", "lev": "Leviticus",
+    "numbers": "Numbers", "num": "Numbers", "nm": "Numbers", "nbr": "Numbers",
+    "deuteronomy": "Deuteronomy", "deut": "Deuteronomy", "dt": "Deuteronomy",
+    "joshua": "Joshua", "josh": "Joshua", "jos": "Joshua",
+    "judges": "Judges", "judg": "Judges", "jg": "Judges", "jdg": "Judges",
+    "ruth": "Ruth", "rut": "Ruth",
+    "1 samuel": "1 Samuel", "1 sam": "1 Samuel", "1sa": "1 Samuel", "1s": "1 Samuel",
+    "i samuel": "1 Samuel", "i sam": "1 Samuel",
+    "2 samuel": "2 Samuel", "2 sam": "2 Samuel", "2sa": "2 Samuel", "2s": "2 Samuel",
+    "ii samuel": "2 Samuel", "ii sam": "2 Samuel",
+    "1 kings": "1 Kings", "1 ki": "1 Kings", "1ki": "1 Kings", "1k": "1 Kings",
+    "i kings": "1 Kings", "i ki": "1 Kings",
+    "2 kings": "2 Kings", "2 ki": "2 Kings", "2ki": "2 Kings", "2k": "2 Kings",
+    "ii kings": "2 Kings", "ii ki": "2 Kings",
+    "1 chronicles": "1 Chronicles", "1 chron": "1 Chronicles", "1ch": "1 Chronicles",
+    "i chronicles": "1 Chronicles", "i chron": "1 Chronicles",
+    "2 chronicles": "2 Chronicles", "2 chron": "2 Chronicles", "2ch": "2 Chronicles",
+    "ii chronicles": "2 Chronicles", "ii chron": "2 Chronicles",
+    "ezra": "Ezra", "ezr": "Ezra",
+    "nehemiah": "Nehemiah", "neh": "Nehemiah",
+    "esther": "Esther", "esth": "Esther", "est": "Esther",
+    "job": "Job",
+    "psalms": "Psalms", "psalm": "Psalms", "psa": "Psalms", "ps": "Psalms", "pss": "Psalms",
+    "proverbs": "Proverbs", "prov": "Proverbs", "pro": "Proverbs", "prv": "Proverbs",
+    "ecclesiastes": "Ecclesiastes", "eccles": "Ecclesiastes", "ecc": "Ecclesiastes",
+    "song of solomon": "Song of Solomon", "song": "Song of Solomon", "sos": "Song of Solomon",
+    "isaiah": "Isaiah", "isa": "Isaiah",
+    "jeremiah": "Jeremiah", "jer": "Jeremiah", "jrm": "Jeremiah",
+    "lamentations": "Lamentations", "lam": "Lamentations",
+    "ezekiel": "Ezekiel", "ezek": "Ezekiel", "ezk": "Ezekiel",
+    "daniel": "Daniel", "dan": "Daniel", "dn": "Daniel",
+    "hosea": "Hosea", "hos": "Hosea",
+    "joel": "Joel", "jl": "Joel",
+    "amos": "Amos", "amo": "Amos",
+    "obadiah": "Obadiah", "obad": "Obadiah",
+    "jonah": "Jonah", "jon": "Jonah", "jnh": "Jonah",
+    "micah": "Micah", "mic": "Micah",
+    "nahum": "Nahum", "nah": "Nahum",
+    "habakkuk": "Habakkuk", "hab": "Habakkuk",
+    "zephaniah": "Zephaniah", "zeph": "Zephaniah", "zep": "Zephaniah",
+    "haggai": "Haggai", "hag": "Haggai", "hagg": "Haggai",
+    "zechariah": "Zechariah", "zech": "Zechariah", "zec": "Zechariah",
+    "malachi": "Malachi", "mal": "Malachi",
+    "matthew": "Matthew", "matt": "Matthew", "mt": "Matthew",
+    "mark": "Mark", "mk": "Mark", "mrk": "Mark",
+    "luke": "Luke", "luk": "Luke", "lk": "Luke",
+    "john": "John", "jhn": "John", "joh": "John", "jn": "John",
+    "acts": "Acts", "act": "Acts",
+    "romans": "Romans", "rom": "Romans", "ro": "Romans",
+    "1 corinthians": "1 Corinthians", "1 cor": "1 Corinthians", "1co": "1 Corinthians",
+    "i corinthians": "1 Corinthians", "i cor": "1 Corinthians",
+    "2 corinthians": "2 Corinthians", "2 cor": "2 Corinthians", "2co": "2 Corinthians",
+    "ii corinthians": "2 Corinthians", "ii cor": "2 Corinthians",
+    "galatians": "Galatians", "gal": "Galatians",
+    "ephesians": "Ephesians", "eph": "Ephesians",
+    "philippians": "Philippians", "phil": "Philippians", "php": "Philippians",
+    "colossians": "Colossians", "col": "Colossians",
+    "1 thessalonians": "1 Thessalonians", "1 thes": "1 Thessalonians", "1th": "1 Thessalonians",
+    "i thessalonians": "1 Thessalonians", "i thes": "1 Thessalonians",
+    "2 thessalonians": "2 Thessalonians", "2 thes": "2 Thessalonians", "2th": "2 Thessalonians",
+    "ii thessalonians": "2 Thessalonians", "ii thes": "2 Thessalonians",
+    "1 timothy": "1 Timothy", "1 tim": "1 Timothy", "1ti": "1 Timothy",
+    "i timothy": "1 Timothy", "i tim": "1 Timothy",
+    "2 timothy": "2 Timothy", "2 tim": "2 Timothy", "2ti": "2 Timothy",
+    "ii timothy": "2 Timothy", "ii tim": "2 Timothy",
+    "titus": "Titus", "tit": "Titus",
+    "philemon": "Philemon", "philem": "Philemon", "phm": "Philemon",
+    "hebrews": "Hebrews", "heb": "Hebrews",
+    "james": "James", "jam": "James", "jm": "James",
+    "1 peter": "1 Peter", "1 pet": "1 Peter", "1pe": "1 Peter",
+    "i peter": "1 Peter", "i pet": "1 Peter",
+    "2 peter": "2 Peter", "2 pet": "2 Peter", "2pe": "2 Peter",
+    "ii peter": "2 Peter", "ii pet": "2 Peter",
+    "1 john": "1 John", "1 jhn": "1 John", "1jn": "1 John",
+    "i john": "1 John", "i jhn": "1 John",
+    "2 john": "2 John", "2 jhn": "2 John", "2jn": "2 John",
+    "ii john": "2 John", "ii jhn": "2 John",
+    "3 john": "3 John", "3 jhn": "3 John", "3jn": "3 John",
+    "iii john": "3 John", "iii jhn": "3 John",
+    "jude": "Jude",
+    "revelation": "Revelation", "rev": "Revelation", "re": "Revelation",
+    "1es": "1ES", "1ma": "1MA", "2ma": "2MA", "3ma": "3MA", "4es": "4ES", "4ma": "4MA",
+    "bar": "BAR", "dng": "DNG", "esg": "ESG", "jdt": "JDT", "prm": "PRM", "psx": "PSX",
+    "sir": "SIR", "tob": "TOB", "wis": "WIS"
+};
 
+function parseBibleRef(text) {
     const lower = text.toLowerCase().trim();
     const m = lower.match(/^(\d?\s*\w+[\w\s]*?)\s+(\d+)(?:[\s:]\s*(\d+))?(?:\s*(?:-|to)\s*(\d+))?\s*$/);
     if (!m) return null;
 
     const bookAbbr = m[1].trim().replace(/\s+/g, ' ');
-    const fullBook = bookMap[bookAbbr];
-    if (!fullBook) return null;
+    const canonicalBook = BOOK_ALIASES[bookAbbr];
+    if (!canonicalBook) return null;
 
     const chapter = parseInt(m[2], 10);
     const verseStart = m[3] ? parseInt(m[3], 10) : null;
     const verseEnd = m[4] ? parseInt(m[4], 10) : null;
-    return { book: fullBook, chapter, verseStart, verseEnd };
+    return { book: canonicalBook, chapter, verseStart, verseEnd };
 }
 
 let offlineBadge = null;

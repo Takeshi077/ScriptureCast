@@ -288,6 +288,22 @@ async fn lookup_verse_offline(
     lookup_verse(app, book, chapter, verse_start, verse_end, translation).await
 }
 
+#[tauri::command]
+async fn debug_bible_db(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let db_path = get_bible_db_path(&app);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("Cannot open bible.db: {}", e))?;
+    let mut stmt = conn
+        .prepare("SELECT DISTINCT book FROM scriptures ORDER BY book LIMIT 20")
+        .map_err(|e| format!("SQL prepare: {}", e))?;
+    let books = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| format!("SQL query: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row: {}", e))?;
+    Ok(books)
+}
+
 struct SemanticServer {
     process: Mutex<Option<Child>>,
     port: Mutex<Option<u16>>,
@@ -840,6 +856,7 @@ pub fn run() {
             lookup_verse_text,
             lookup_verse_offline,
             offline_db_available,
+            debug_bible_db,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
