@@ -101,6 +101,8 @@ fn get_bible_db_path(app: &tauri::AppHandle) -> PathBuf {
     if let Ok(dir) = app.path().resource_dir() {
         let p = dir.join("bible.db");
         if p.exists() { return p; }
+        let p = dir.join("resources").join("bible.db");
+        if p.exists() { return p; }
     }
     let cwd = std::env::current_dir().unwrap_or_default();
     let p = cwd.join("data").join("bible.db");
