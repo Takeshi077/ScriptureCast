@@ -1238,17 +1238,16 @@ async function doManualVerseLookup(text) {
                 await doOfflineLookup(parsed);
                 return;
             }
+
+            await doOfflineLookup(parsed);
+            return;
         }
 
-        await doOfflineLookup(parsed);
-        return;
+        // No WebSocket and no Tauri
+        lookupPreview.classList.remove('hidden');
+        lookupRefLabel.textContent = 'Offline';
+        lookupTextPrev.textContent = 'Cannot look up verse without a network connection.';
     }
-
-    // No WebSocket and no Tauri
-    lookupPreview.classList.remove('hidden');
-    lookupRefLabel.textContent = 'Offline';
-    lookupTextPrev.textContent = 'Cannot look up verse without a network connection.';
-}
 
 // ── Utilities ──────────────────────────────────────────────
 function safeJson(str) {
