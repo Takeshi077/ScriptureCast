@@ -1610,6 +1610,7 @@ document.getElementById('open-screen-btn').addEventListener('click', openProject
 // Tauri-specific outputs section
 if (window.__TAURI__) {
     document.getElementById('outputs-btn')?.classList.remove('hidden');
+    document.getElementById('open-projector-btn')?.classList.remove('hidden');
     document.getElementById('refresh-displays-btn')?.addEventListener('click', loadDisplays);
     document.getElementById('identify-displays-btn')?.addEventListener('click', identifyDisplays);
     document.getElementById('open-projector-btn')?.addEventListener('click', async () => {
