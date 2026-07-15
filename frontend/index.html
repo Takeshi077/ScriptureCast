@@ -7,7 +7,7 @@
     <meta name="description" content="ScriptureCast automatically detects Bible verses during sermons and displays them on screen in real-time.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="icon" href="logo.png" type="image/png">
 </head>
@@ -33,138 +33,147 @@
         </div>
     </nav>
 
+    <!-- ═══════════════════════════════════════════════════════ HERO ═══ -->
     <section id="hero">
-        <div class="hero-bg-glow"></div>
-        <div class="hero-content">
-            <div class="hero-badge">Live Scripture Display</div>
-            <h1 class="hero-title">Your sermon.<br>Their Bible.<span class="hero-accent">On screen.</span></h1>
-            <p class="hero-subtitle">ScriptureCast automatically detects Bible verses as you preach and displays them on the projector. Download the desktop app — or start free in your browser.</p>
-            <div class="hero-actions">
-                <a href="#download" class="hero-btn-primary">Download Free</a>
-                <a href="/register" class="hero-btn-secondary">Start Free Trial</a>
+        <div class="hero-mesh"></div>
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-inner">
+            <div class="hero-text">
+                <div class="hero-badge anim-fade-up">Live Scripture Display</div>
+                <h1 class="hero-title anim-fade-up">
+                    Your sermon.<br>
+                    Their Bible.<br>
+                    <span class="hero-accent">On screen.</span>
+                </h1>
+                <p class="hero-subtitle anim-fade-up">Automatically detects Bible verses as you preach and displays them on the projector. No searching, no distractions, no extra staff.</p>
+                <div class="hero-actions anim-fade-up">
+                    <a href="#download" class="btn-primary btn-lg">Download Free</a>
+                    <a href="/register" class="btn-ghost btn-lg">Start Free Trial</a>
+                </div>
+                <p class="hero-note anim-fade-up">No credit card required &bull; Works offline on desktop</p>
             </div>
-            <p class="hero-trial-note">No credit card required &bull; Works offline on desktop</p>
-            <div class="hero-demo">
-                <div class="demo-screen">
-                    <div class="carousel-track">
-                        <!-- Slide 1 -->
-                        <div class="carousel-slide active">
-                            <div class="demo-reference">John 3:16 (KJV)</div>
-                            <div class="demo-text">"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."</div>
+            <div class="hero-visual anim-fade-up">
+                <div class="laptop-frame">
+                    <div class="laptop-screen">
+                        <div class="screen-toolbar">
+                            <span class="toolbar-dot"></span>
+                            <span class="toolbar-dot"></span>
+                            <span class="toolbar-dot"></span>
+                            <span class="toolbar-label">ScriptureCast Dashboard</span>
                         </div>
-                        <!-- Slide 2 -->
-                        <div class="carousel-slide">
-                            <div class="demo-reference">Romans 8:28 (KJV)</div>
-                            <div class="demo-text">"And we know that all things work together for good to them that love God, to them who are the called according to his purpose."</div>
-                        </div>
-                        <!-- Slide 3 -->
-                        <div class="carousel-slide">
-                            <div class="demo-reference">Proverbs 3:5 (KJV)</div>
-                            <div class="demo-text">"Trust in the LORD with all thine heart; and lean not unto thine own understanding."</div>
-                        </div>
-                        <!-- Slide 4 -->
-                        <div class="carousel-slide">
-                            <div class="demo-reference">Philippians 4:13 (KJV)</div>
-                            <div class="demo-text">"I can do all things through Christ which strengtheneth me."</div>
+                        <div class="screen-content">
+                            <div class="screen-transcript">
+                                <div class="transcript-line faded">"...and as the apostle Paul writes in..."</div>
+                                <div class="transcript-line active">"<span class="highlight-ref">Romans 8:28</span>"</div>
+                                <div class="transcript-line faded">"And we know that all things work together..."</div>
+                            </div>
+                            <div class="screen-projector">
+                                <div class="projector-verse-ref">Romans 8:28 (KJV)</div>
+                                <div class="projector-verse-text">"And we know that all things work together for good to them that love God, to them who are the called according to his purpose."</div>
+                            </div>
                         </div>
                     </div>
+                    <div class="laptop-base"></div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════ FEATURES ═══ -->
     <section id="features">
-        <div class="section-header">
-            <h2>Everything you need for scripture display</h2>
+        <div class="section-header anim-fade-up">
+            <h2>Everything you need</h2>
             <p>Built for churches that want to focus on the Word, not the technology.</p>
         </div>
 
-        <div class="spotlight">
-            <div class="spotlight-visual">
-                <div class="spotlight-mockup">
-                    <div class="mockup-label">Live Detection</div>
-                    <div class="mockup-transcript">
-                        <span class="mockup-fade">"...and as it says in "</span><span class="mockup-highlight">John 3:16</span><span class="mockup-fade">", for God so loved..."</span>
-                    </div>
-                    <div class="mockup-arrow">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-                    </div>
-                    <div class="mockup-verse">
-                        <div class="mockup-verse-ref">John 3:16 (KJV)</div>
-                        <div class="mockup-verse-text">"For God so loved the world, that he gave his only begotten Son..."</div>
-                        <div class="mockup-confidence"><span class="confidence-bar"></span> 98% confidence</div>
+        <div class="showcase">
+            <div class="showcase-sticky">
+                <div class="showcase-screen glass">
+                    <div class="showcase-screen-inner" id="showcase-screen">
+                        <div class="showcase-label" id="showcase-label">Auto-Detection</div>
+                        <div class="showcase-visual" id="showcase-visual">
+                            <div class="sv-transcript">
+                                <span class="sv-faded">"...turn to "</span><span class="sv-ref">John 3:16</span><span class="sv-faded">" in your Bibles..."</span>
+                            </div>
+                            <div class="sv-arrow">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                            </div>
+                            <div class="sv-verse">
+                                <div class="sv-verse-ref">John 3:16</div>
+                                <div class="sv-verse-text">"For God so loved the world, that he gave his only begotten Son..."</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="spotlight-features">
-                <div class="spotlight-item">
-                    <div class="spotlight-icon auto-detect-icon">
+            <div class="showcase-scroll">
+                <div class="showcase-step active" data-step="0">
+                    <div class="showcase-step-icon auto-detect-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
                     </div>
                     <h3>Auto-Detect Verses</h3>
-                    <p>Speak naturally — ScriptureCast recognizes verse references from your sermon and displays them instantly.</p>
+                    <p>Speak naturally — ScriptureCast recognizes verse references from your sermon. "John 3:16", "turn to Romans 8", "Hebrews 11 verse 1" — it all works.</p>
                 </div>
-                <div class="spotlight-item">
-                    <div class="spotlight-icon live-transcribe-icon">
+                <div class="showcase-step" data-step="1">
+                    <div class="showcase-step-icon semantic-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <h3>Semantic Quote Detection</h3>
+                    <p>Even when you quote a verse without citing the reference, AI-powered semantic search matches it to the right passage.</p>
+                </div>
+                <div class="showcase-step" data-step="2">
+                    <div class="showcase-step-icon confidence-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    </div>
+                    <h3>Confidence Scoring</h3>
+                    <p>Every detection gets a confidence score. High matches display instantly. Lower ones pause for your confirmation — no wrong verses on screen.</p>
+                </div>
+                <div class="showcase-step" data-step="3">
+                    <div class="showcase-step-icon live-transcribe-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M8 12h8"/><path d="M8 8h6"/><path d="M8 16h4"/></svg>
                     </div>
                     <h3>Live Transcription</h3>
-                    <p>Full sermon transcription with real-time verse detection. Keep a running record of everything spoken.</p>
-                </div>
-                <div class="spotlight-item">
-                    <div class="spotlight-icon semantic-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </div>
-                    <h3>Semantic Search</h3>
-                    <p>Even partial quotes or paraphrases are matched to the right verse using AI-powered semantic search.</p>
+                    <p>Full sermon transcription with real-time verse detection. Keep a running record of everything spoken during the service.</p>
                 </div>
             </div>
         </div>
 
-        <div class="feature-lists">
-            <div class="feature-list-col">
-                <h3 class="feature-list-title">Display &amp; Projector</h3>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon dual-screen-icon">
+        <div class="tool-grid">
+            <div class="tool-col">
+                <h3 class="tool-heading">Display &amp; Projector</h3>
+                <div class="tool-item glass">
+                    <div class="tool-icon dual-screen-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
                     <div>
                         <h4>Dashboard + Projector</h4>
-                        <p>Operator dashboard on one screen, scripture on the projector.</p>
+                        <p>Operator dashboard on one screen, scripture on the projector. Two views, one system.</p>
                     </div>
                 </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon confidence-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                    </div>
-                    <div>
-                        <h4>Confidence Scoring</h4>
-                        <p>Review or confirm detections before they appear on screen.</p>
-                    </div>
-                </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon image-upload-icon">
+                <div class="tool-item glass">
+                    <div class="tool-icon image-upload-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                     </div>
                     <div>
                         <h4>Image Upload</h4>
-                        <p>Display worship slides, announcements, or backgrounds.</p>
+                        <p>Worship slides, announcements, or backgrounds on the projector alongside scripture.</p>
                     </div>
                 </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon multi-display-icon">
+                <div class="tool-item glass">
+                    <div class="tool-icon multi-display-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="2" y="19" width="20" height="2" rx="1"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="19"/></svg>
                     </div>
                     <div>
                         <h4>Multi-Display</h4>
-                        <p>Identify screens, pick which display gets the projector.</p>
+                        <p>Identify screens, pick which display gets the projector. Auto-detect new monitors.</p>
                     </div>
                 </div>
             </div>
-            <div class="feature-list-col">
-                <h3 class="feature-list-title">Operator Tools</h3>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon manual-search-icon">
+            <div class="tool-col">
+                <h3 class="tool-heading">Operator Tools</h3>
+                <div class="tool-item glass">
+                    <div class="tool-icon manual-search-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </div>
                     <div>
@@ -172,8 +181,8 @@
                         <p>Smart autocomplete with abbreviation support and popular verse badges.</p>
                     </div>
                 </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon chapter-browser-icon">
+                <div class="tool-item glass">
+                    <div class="tool-icon chapter-browser-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     </div>
                     <div>
@@ -181,17 +190,17 @@
                         <p>Browse any book and chapter. Display any verse on demand.</p>
                     </div>
                 </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon verse-nav-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <div class="tool-item glass">
+                    <div class="tool-icon verse-nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/><line x1="9" y1="6" x2="21" y2="6"/></svg>
                     </div>
                     <div>
                         <h4>Verse Navigation</h4>
                         <p>Step through multi-verse passages with keyboard shortcuts.</p>
                     </div>
                 </div>
-                <div class="feature-list-item">
-                    <div class="feature-list-icon multi-trans-icon">
+                <div class="tool-item glass">
+                    <div class="tool-icon multi-trans-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                     </div>
                     <div>
@@ -203,104 +212,127 @@
         </div>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════ OFFLINE ═══ -->
     <section id="offline">
-        <div class="offline-banner">
-            <div class="offline-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>
-            </div>
-            <div class="offline-text">
-                <h2>Works Offline on Desktop</h2>
-                <p>The desktop app bundles a complete Bible database, local Whisper transcription, and offline semantic search. No internet required — your service runs reliably even if the network doesn't.</p>
+        <div class="offline-mesh"></div>
+        <div class="offline-inner">
+            <div class="offline-badge anim-fade-up">Desktop Exclusive</div>
+            <h2 class="offline-title anim-fade-up">Works offline.<br>Every time.</h2>
+            <p class="offline-desc anim-fade-up">The desktop app bundles a complete Bible database, local Whisper transcription, and offline semantic search. Your service runs reliably — even when the network doesn't.</p>
+            <div class="offline-features anim-fade-up">
+                <div class="offline-feat">
+                    <div class="offline-feat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    </div>
+                    <span>Bundled Bible DB</span>
+                </div>
+                <div class="offline-feat">
+                    <div class="offline-feat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                    </div>
+                    <span>Local Whisper STT</span>
+                </div>
+                <div class="offline-feat">
+                    <div class="offline-feat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <span>Offline Semantic Search</span>
+                </div>
             </div>
         </div>
     </section>
 
-    <section id="download">
-        <div class="section-header">
-            <h2>Download ScriptureCast</h2>
-            <p>Install the desktop app on Windows, macOS, or Linux. One download, zero setup.</p>
+    <!-- ═══════════════════════════════════════════════ HOW IT WORKS ═══ -->
+    <section id="how-it-works">
+        <div class="section-header anim-fade-up">
+            <h2>How It Works</h2>
+            <p>Four steps to scripture on screen.</p>
         </div>
-        <div class="download-options">
-            <div class="download-card" data-os="windows">
+        <div class="timeline">
+            <div class="timeline-line"></div>
+            <div class="timeline-item anim-fade-up">
+                <div class="timeline-dot">1</div>
+                <div class="timeline-card glass">
+                    <h3>Open the Dashboard</h3>
+                    <p>Launch the operator dashboard on your laptop. Enable speech recognition or type verses manually.</p>
+                </div>
+            </div>
+            <div class="timeline-item anim-fade-up">
+                <div class="timeline-dot">2</div>
+                <div class="timeline-card glass">
+                    <h3>Connect Your Projector</h3>
+                    <p>Identify displays and open the projector screen. Drag to HDMI or let the desktop app handle it.</p>
+                </div>
+            </div>
+            <div class="timeline-item anim-fade-up">
+                <div class="timeline-dot">3</div>
+                <div class="timeline-card glass">
+                    <h3>Preach Naturally</h3>
+                    <p>Speak as you normally would. ScriptureCast transcribes in real-time and detects references.</p>
+                </div>
+            </div>
+            <div class="timeline-item anim-fade-up">
+                <div class="timeline-dot">4</div>
+                <div class="timeline-card glass">
+                    <h3>Verse Appears on Screen</h3>
+                    <p>High-confidence matches display instantly. Review or confirm lower-confidence detections.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═════════════════════════════════════════════════ DOWNLOAD ═══ -->
+    <section id="download">
+        <div class="section-header anim-fade-up">
+            <h2>Download ScriptureCast</h2>
+            <p>One download. Zero setup. Works offline.</p>
+        </div>
+        <div class="download-row">
+            <div class="download-card glass anim-fade-up" data-os="windows">
                 <div class="download-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
                 </div>
                 <h3>Windows</h3>
                 <p class="download-arch">64-bit</p>
-                <a href="downloads/ScriptureCast_0.1.1_x64-setup.exe" class="download-btn" data-platform="windows">Download for Windows</a>
-                <p class="download-detail">Installer (.exe) &bullet; v0.1.1 &bullet; ~76 MB</p>
+                <a href="downloads/ScriptureCast_0.1.1_x64-setup.exe" class="btn-primary download-btn" data-platform="windows">Download for Windows</a>
+                <p class="download-detail">Installer (.exe) &bull; v0.1.1 &bull; ~76 MB</p>
             </div>
-            <div class="download-card" data-os="macos">
+            <div class="download-card glass anim-fade-up" data-os="macos">
                 <div class="download-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 </div>
                 <h3>macOS</h3>
-                <p class="download-arch">Apple Silicon &bullet; Intel</p>
-                <a href="#" class="download-btn" data-platform="macos">Download for macOS</a>
-                <p class="download-detail">Disk image (.dmg) &bullet; via GitHub</p>
+                <p class="download-arch">Apple Silicon &bull; Intel</p>
+                <a href="#" class="btn-primary download-btn" data-platform="macos">Download for macOS</a>
+                <p class="download-detail">Disk image (.dmg) &bull; via GitHub</p>
             </div>
-            <div class="download-card" data-os="linux">
+            <div class="download-card glass anim-fade-up" data-os="linux">
                 <div class="download-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-3Z"/><path d="M18 3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-3Z"/><path d="M8 3.5V5a4 4 0 0 0 8 0V3.5"/><rect x="2" y="10" width="20" height="10" rx="1"/><path d="M2 14h20"/></svg>
                 </div>
                 <h3>Linux</h3>
-                <p class="download-arch">AppImage &bullet; .deb</p>
-                <a href="#" class="download-btn" data-platform="linux">Download for Linux</a>
-                <p class="download-detail">AppImage &bullet; ~5 MB</p>
+                <p class="download-arch">AppImage &bull; .deb</p>
+                <a href="#" class="btn-primary download-btn" data-platform="linux">Download for Linux</a>
+                <p class="download-detail">AppImage &bull; ~5 MB</p>
             </div>
         </div>
-        <p class="download-note">All platforms are 64-bit. The desktop app works offline — no internet required for verse lookup and transcription.</p>
+        <p class="download-note anim-fade-up">All platforms 64-bit. Also works as a web app — <a href="/register">start free in your browser</a>.</p>
     </section>
 
-    <section id="how-it-works">
-        <div class="section-header">
-            <h2>How It Works</h2>
-            <p>Four simple steps to get scripture on screen.</p>
-        </div>
-        <div class="steps">
-            <div class="step">
-                <div class="step-number">1</div>
-                <h3>Open the Dashboard</h3>
-                <p>Open the operator dashboard on your laptop. Enable speech recognition or type verses manually.</p>
-            </div>
-            <div class="step-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <h3>Connect Your Projector</h3>
-                <p>Identify your displays and open the projector screen. Drag it to the HDMI output or let the desktop app handle it automatically.</p>
-            </div>
-            <div class="step-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <h3>Preach Naturally</h3>
-                <p>As you speak, ScriptureCast transcribes in real-time and detects Bible references automatically.</p>
-            </div>
-            <div class="step-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <h3>Verse Appears on Screen</h3>
-                <p>High-confidence matches display instantly on the projector. You can review or confirm lower-confidence detections.</p>
-            </div>
-        </div>
-    </section>
-
+    <!-- ═════════════════════════════════════════════════════ CTA ═══ -->
     <section id="cta">
-        <div class="cta-content">
-            <h2>Ready to try ScriptureCast?</h2>
-            <p>Download the desktop app or start free in your browser — no credit card required.</p>
+        <div class="cta-mesh"></div>
+        <div class="cta-inner anim-fade-up">
+            <h2>Ready to put scripture on screen?</h2>
+            <p>Download the desktop app or start free in your browser.</p>
             <div class="cta-actions">
-                <a href="#download" class="hero-btn-primary">Download Now</a>
-                <a href="/register" class="hero-btn-secondary">Start Free Trial</a>
+                <a href="#download" class="btn-primary btn-lg">Download Now</a>
+                <a href="/register" class="btn-ghost btn-lg">Start Free Trial</a>
             </div>
         </div>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════ FOOTER ═══ -->
     <footer id="landing-footer">
         <div class="footer-inner">
             <div class="footer-brand">
@@ -311,6 +343,7 @@
             <p class="footer-copy">&copy; 2026 ScriptureCast. All rights reserved.</p>
         </div>
     </footer>
+
     <script src="js/landing.js"></script>
 </body>
 </html>
