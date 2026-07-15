@@ -79,25 +79,40 @@
             <p>Built for churches that want to focus on the Word, not the technology.</p>
         </div>
 
-        <div class="feature-group">
-            <h3 class="feature-group-title">AI-Powered Detection</h3>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon auto-detect-icon">
+        <div class="spotlight">
+            <div class="spotlight-visual">
+                <div class="spotlight-mockup">
+                    <div class="mockup-label">Live Detection</div>
+                    <div class="mockup-transcript">
+                        <span class="mockup-fade">"...and as it says in "</span><span class="mockup-highlight">John 3:16</span><span class="mockup-fade">", for God so loved..."</span>
+                    </div>
+                    <div class="mockup-arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                    </div>
+                    <div class="mockup-verse">
+                        <div class="mockup-verse-ref">John 3:16 (KJV)</div>
+                        <div class="mockup-verse-text">"For God so loved the world, that he gave his only begotten Son..."</div>
+                        <div class="mockup-confidence"><span class="confidence-bar"></span> 98% confidence</div>
+                    </div>
+                </div>
+            </div>
+            <div class="spotlight-features">
+                <div class="spotlight-item">
+                    <div class="spotlight-icon auto-detect-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
                     </div>
                     <h3>Auto-Detect Verses</h3>
                     <p>Speak naturally — ScriptureCast recognizes verse references from your sermon and displays them instantly.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon live-transcribe-icon">
+                <div class="spotlight-item">
+                    <div class="spotlight-icon live-transcribe-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M8 12h8"/><path d="M8 8h6"/><path d="M8 16h4"/></svg>
                     </div>
                     <h3>Live Transcription</h3>
                     <p>Full sermon transcription with real-time verse detection. Keep a running record of everything spoken.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon semantic-icon">
+                <div class="spotlight-item">
+                    <div class="spotlight-icon semantic-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
                     <h3>Semantic Search</h3>
@@ -106,70 +121,83 @@
             </div>
         </div>
 
-        <div class="feature-group">
-            <h3 class="feature-group-title">Projector &amp; Display</h3>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon dual-screen-icon">
+        <div class="feature-lists">
+            <div class="feature-list-col">
+                <h3 class="feature-list-title">Display &amp; Projector</h3>
+                <div class="feature-list-item">
+                    <div class="feature-list-icon dual-screen-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
-                    <h3>Dashboard + Projector</h3>
-                    <p>Operator dashboard on one screen, scripture display on the projector. Two separate views, one seamless system.</p>
+                    <div>
+                        <h4>Dashboard + Projector</h4>
+                        <p>Operator dashboard on one screen, scripture on the projector.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon confidence-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon confidence-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     </div>
-                    <h3>Confidence Scoring</h3>
-                    <p>Every detected verse gets a confidence score. High matches display instantly; lower ones let you confirm first.</p>
+                    <div>
+                        <h4>Confidence Scoring</h4>
+                        <p>Review or confirm detections before they appear on screen.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon image-upload-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon image-upload-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                     </div>
-                    <h3>Image Upload &amp; Display</h3>
-                    <p>Upload worship slides, announcements, or backgrounds to the projector alongside scripture.</p>
+                    <div>
+                        <h4>Image Upload</h4>
+                        <p>Display worship slides, announcements, or backgrounds.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon multi-display-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon multi-display-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="2" y="19" width="20" height="2" rx="1"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="19"/></svg>
                     </div>
-                    <h3>Multi-Display Management</h3>
-                    <p>Identify screens, pick which display gets the projector, and auto-detect new monitors as they connect.</p>
+                    <div>
+                        <h4>Multi-Display</h4>
+                        <p>Identify screens, pick which display gets the projector.</p>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="feature-group">
-            <h3 class="feature-group-title">Operator Tools</h3>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon manual-search-icon">
+            <div class="feature-list-col">
+                <h3 class="feature-list-title">Operator Tools</h3>
+                <div class="feature-list-item">
+                    <div class="feature-list-icon manual-search-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </div>
-                    <h3>Manual Verse Lookup</h3>
-                    <p>Smart search with autocomplete, abbreviation support, and popular verse badges for quick access.</p>
+                    <div>
+                        <h4>Manual Verse Lookup</h4>
+                        <p>Smart autocomplete with abbreviation support and popular verse badges.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon chapter-browser-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon chapter-browser-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     </div>
-                    <h3>Chapter Browser</h3>
-                    <p>Browse any book and chapter. Preview and display any verse on demand with a single click.</p>
+                    <div>
+                        <h4>Chapter Browser</h4>
+                        <p>Browse any book and chapter. Display any verse on demand.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon verse-nav-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon verse-nav-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                     </div>
-                    <h3>Verse Navigation</h3>
-                    <p>Step through multi-verse passages one verse at a time with keyboard shortcuts and on-screen buttons.</p>
+                    <div>
+                        <h4>Verse Navigation</h4>
+                        <p>Step through multi-verse passages with keyboard shortcuts.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon multi-trans-icon">
+                <div class="feature-list-item">
+                    <div class="feature-list-icon multi-trans-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                     </div>
-                    <h3>Multiple Translations</h3>
-                    <p>Switch between KJV and WEB translations on the fly. Your preference, your display.</p>
+                    <div>
+                        <h4>Multiple Translations</h4>
+                        <p>Switch between KJV and WEB on the fly.</p>
+                    </div>
                 </div>
             </div>
         </div>
